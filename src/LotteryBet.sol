@@ -1,23 +1,33 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BetInterface } from "./interfaces/BetInterface.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Library } from "./Library.sol";
 
-contract BetExample is BetInterface, Ownable {
+contract LotteryBet is BetInterface, Ownable {
+    bytes32 public constant LOTTERY = keccak256("LOTTERY");
+
     uint256 private immutable created;
-    address private immutable player;
     uint256 private immutable amount;
     address private immutable game;
+    uint256 private immutable tokenId; // tokenId of Lottery{ERC721}
 
-    uint256 private status; // 1 - created, 2 - resolved
+    uint256 private status; // 1 - created, 2 - win, 3 - lose, 4 - refund
     uint256 private result;
+    address private player;
+    Library.Ticket[] private tickets;
 
-    constructor(address _player, uint256 _amount, address _game) Ownable(_msgSender()) {
+    bool private symbolUnlocked = false;
+
+    event PlayerChanged(address indexed player);
+
+    constructor(address _player, uint256 _amount, address _game, uint256 _tokenId) Ownable(_msgSender()) {
         player = _player;
         amount = _amount;
         status = 1;
         game = _game;
+        tokenId = _tokenId;
         created = block.timestamp;
     }
     /**
@@ -70,12 +80,32 @@ contract BetExample is BetInterface, Ownable {
         return (player, game, amount, result, status, created);
     }
 
-    function setResult(uint256 _result) external onlyOwner {
-        result = _result;
-        status = 2;
+    /**
+     * @return tokenId - tokenId of Lottery{ERC721}
+     */
+    function getTokenId() external view returns (uint256) {
+        return tokenId;
     }
 
-    function setStatus(uint256 _status) external onlyOwner {
-        status = _status;
+    function getTickets() external view returns (bytes[] memory) {
+        bytes[] memory _tickets = new bytes[](tickets.length);
+        for (uint256 i = 0; i < tickets.length; i++) {
+            _tickets[i] = abi.encode(tickets[i]);
+        }
+        return _tickets;
+    }
+
+    function setTickets(Library.Ticket[] memory _tickets) external onlyOwner {
+        for (uint256 i = 0; i < _tickets.length; i++) {
+            tickets.push(_tickets[i]);
+        }
+        if (tickets.length >= 3) {
+            symbolUnlocked = true;
+        }
+    }
+
+    function changePlayer(address _player) external onlyOwner {
+        player = _player;
+        emit PlayerChanged(_player);
     }
 }
