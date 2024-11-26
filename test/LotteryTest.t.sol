@@ -14,6 +14,8 @@ import { LotteryBet } from "src/LotteryBet.sol";
 import { LotteryRound } from "src/LotteryRound.sol";
 import { DynamicStaking } from "./DynamicStaking.sol";
 import { IVRFSubscriptionV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFSubscriptionV2Plus.sol";
+import { console } from "forge-std/src/console.sol";
+import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 
 contract LotteryTest is Test {
     Token public token;
@@ -194,5 +196,43 @@ contract LotteryTest is Test {
         vm.assertEq(lottery.balanceOf(address(bob)), 1);
         vm.assertEq(bet.getPlayer(), bob);
         vm.assertEq(lottery.ownerOf(tokenId), bob);
+    }
+
+    function testRequest_success() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        address _bet = placeBet(alice, address(round), tickets);
+        LotteryBet bet = LotteryBet(_bet);
+        uint256 tokenId = bet.getTokenId();
+        vm.assertEq(lottery.balanceOf(address(alice)), 1);
+        vm.assertEq(bet.getPlayer(), alice);
+        vm.assertEq(lottery.ownerOf(tokenId), alice);
+
+        vm.expectRevert(bytes("LR06"));
+        round.requestRandomness();
+        vm.assertEq(round.getStatus(), 1);
+
+        vm.warp(block.timestamp + 30 days + 30 minutes);
+        vm.assertEq(round.getStatus(), 5);
+
+        vm.mockCall(
+            coordinator, abi.encodeWithSelector(IVRFCoordinatorV2Plus.requestRandomWords.selector), abi.encode(555)
+        );
+        round.requestRandomness();
+
+        assertEq(round.getStatus(), 2);
+        uint256[] memory randomWords = new uint256[](6);
+        randomWords[0] = 0;
+        randomWords[1] = 1;
+        randomWords[2] = 2;
+        randomWords[3] = 3;
+        randomWords[4] = 4;
+        randomWords[5] = 0;
+        vm.prank(address(coordinator));
+        round.rawFulfillRandomWords(555, randomWords);
+        assertEq(round.getStatus(), 3);
+        (uint8 symbol, uint32 numbers) = round.winTicket();
+        assertEq(symbol, 1);
+        assertEq(numbers, 62);
     }
 }

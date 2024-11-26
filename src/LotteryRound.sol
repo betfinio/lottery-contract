@@ -8,6 +8,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VRFConsumerBaseV2Plus } from "@chainlink/contracts/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 import { Lottery } from "./Lottery.sol";
+import { Library } from "./Library.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -20,6 +21,7 @@ import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2Plu
  * LR04: Insufficient balance
  * LR05: Invalid request period
  * LR06: Round is open
+ * LR07: Request failed
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
@@ -37,6 +39,23 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     uint256 private finish;
     Lottery private lottery;
 
+    Library.Ticket public winTicket;
+
+    /*
+    * Status:
+    * 1 - betting
+    * 2 - pending
+    * 3 - done
+    * 4 - refund
+    * 5 - waiting for request
+    */
+    uint8 private status;
+
+    uint256 private requestId;
+
+    event RoundRequested(uint256 indexed requestId);
+    event RoundFinished(Library.Ticket winTicket);
+
     constructor(
         address _lottery,
         uint256 _finish,
@@ -52,6 +71,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         subscriptionId = _subscriptionId;
         coordinator = IVRFCoordinatorV2Plus(_coordinator);
         keyHash = bytes32(_keyHash);
+        status = 1;
     }
 
     function registerBet(address _bet) external onlyOwner {
@@ -81,8 +101,10 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(!isOpen(), "LR06");
         // check if the request period has passed
         require(block.timestamp < finish + REQUEST_PERIOD, "LR05");
+        // update status
+        status = 2;
         // request randomness
-        coordinator.requestRandomWords(
+        requestId = coordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
                 subId: subscriptionId,
@@ -92,9 +114,31 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
                 extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: true }))
             })
         );
+        // check if request failed
+        require(requestId > 0, "LR07");
+        // emit event
+        emit RoundRequested(requestId);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override { }
+    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
+        // check requrst id
+        require(_requestId == requestId, "LR07");
+        // update status
+        status = 3;
+        // create result
+        uint256 number1 = _randomWords[0] % 25 + 1;
+        uint256 number2 = _randomWords[1] % 25 + 1;
+        uint256 number3 = _randomWords[2] % 25 + 1;
+        uint256 number4 = _randomWords[3] % 25 + 1;
+        uint256 number5 = _randomWords[4] % 25 + 1;
+
+        uint8 symbol = uint8(_randomWords[5] % 5 + 1);
+        uint32 numbers = uint32(2 ** number1 + 2 ** number2 + 2 ** number3 + 2 ** number4 + 2 ** number5);
+
+        winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
+        // emit event
+        emit RoundFinished(winTicket);
+    }
 
     function isOpen() public view returns (bool) {
         return block.timestamp < finish;
@@ -127,5 +171,12 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(_finish > finish, "LR03");
         // update finish
         finish = _finish;
+    }
+
+    function getStatus() external view returns (uint8) {
+        if (!isOpen() && status == 1) {
+            return 5;
+        }
+        return status;
     }
 }
