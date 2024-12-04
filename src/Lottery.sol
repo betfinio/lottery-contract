@@ -17,6 +17,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Library } from "./Library.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import { console } from "forge-std/src/console.sol";
 
 /**
  * Errors:
@@ -27,17 +28,19 @@ import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/I
  * LT05: Transfer failed
  * LT06: Error with chainlink subscription
  * LT07: Invalid ticket
+ * LT08: Invalid claimer
+ * LT09: Already claimed
  */
 contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant SERVICE = keccak256("SERVICE");
+    bytes32 public constant ROUND = keccak256("ROUND");
     bytes32 public constant CORE = keccak256("CORE");
 
-    uint256 public constant TICKET_PRICE = 2500 ether;
     uint256 public constant MAX_TICKETS_PER_BET = 9;
-
-    uint256 public constant BONUS = 500;
+    uint256 public constant MAX_SHARES = 213_770;
+    uint256 public TICKET_PRICE = 1500 ether;
 
     uint256 private immutable created;
     IVRFCoordinatorV2Plus private immutable coordinator;
@@ -50,6 +53,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     mapping(address round => bool exists) private rounds;
     mapping(uint256 tokenId => address bet) private bets;
+    mapping(address round => uint256 claimed) private claimedByRound;
 
     event RoundCreated(address indexed round, uint256 indexed timestamp);
 
@@ -97,12 +101,14 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         }
         // validate round
         require(rounds[_round], "LT02");
+        // get ticket price from round
+        uint256 price = LotteryRound(_round).ticketPrice();
         // validate amount
-        require(amount == TICKET_PRICE * _count, "LT03");
+        require(amount == price * _count, "LT03");
         // generate token id
         uint256 tokenId = totalSupply() + 1;
         // create bet contract
-        LotteryBet bet = new LotteryBet(_player, amount, address(this), tokenId);
+        LotteryBet bet = new LotteryBet(_player, amount, address(this), tokenId, _round);
         // mint nft ticket to player
         _safeMint(_player, tokenId);
         // set tickets
@@ -119,7 +125,8 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     function createRound(uint256 _timestamp) external onlyRole(SERVICE) returns (address) {
         // create new round
-        LotteryRound round = new LotteryRound(address(this), _timestamp, address(coordinator), subscriptionId, keyHash);
+        LotteryRound round =
+            new LotteryRound(address(this), _timestamp, address(coordinator), subscriptionId, keyHash, TICKET_PRICE);
         // register round
         rounds[address(round)] = true;
         // set round as consumer
@@ -128,10 +135,16 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         (, uint96 nativeBalance,,,) = coordinator.getSubscription(subscriptionId);
         // check funds on subscription - min 1 POL
         require(nativeBalance > 1 ether, "LT06");
+        // add role
+        _grantRole(ROUND, address(round));
         // emit event
         emit RoundCreated(address(round), _timestamp);
         // return address of the round
         return address(round);
+    }
+
+    function reserveFunds(uint256 amount) external onlyRole(ROUND) {
+        staking.reserveFunds(amount);
     }
 
     function updateFinish(address _round, uint256 _finish) external onlyRole(SERVICE) {
@@ -199,5 +212,57 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
         super._increaseBalance(account, value);
+    }
+
+    function setTicketPrice(uint256 _price) external onlyRole(SERVICE) {
+        TICKET_PRICE = _price;
+    }
+
+    function claim(uint256 id) external {
+        // check if owner of the ticket
+        require(ownerOf(id) == _msgSender(), "LT08");
+        _claim(id);
+    }
+
+    function claimByService(uint256 id) external onlyRole(SERVICE) {
+        _claim(id);
+    }
+
+    function _claim(uint256 id) internal {
+        // get bet address
+        address betAddress = bets[id];
+        // get bet contract
+        LotteryBet bet = LotteryBet(betAddress);
+        require(bet.getClaimed() == false, "LT09");
+        // get round address
+        address roundAddress = bet.getRound();
+        // get round contract
+        LotteryRound round = LotteryRound(roundAddress);
+        // get ticket price
+        uint256 amount = round.ticketPrice();
+        // parse win ticket
+        (uint8 symbol, uint32 numbers) = round.winTicket();
+        // calculate win coef
+        uint256 coef = bet.calculateResult(Library.Ticket({ symbol: symbol, numbers: numbers }));
+        // calculate win amount
+        uint256 winAmount = amount * coef;
+        // check if win amount is greater than 0
+        if (winAmount > 0) {
+            // transfer win amount to player
+            token.transfer(bet.getPlayer(), winAmount);
+        }
+        // set bet result and status
+        bet.setResult(winAmount);
+        // increase claimed amount
+        claimedByRound[roundAddress] += winAmount;
+        // increment claimed tickets
+        bool allClaimed = round.claim(betAddress);
+        // check if all tickets are claimed
+        if (allClaimed) {
+            // transfer back to staking =  initial amount - claimed amount
+            uint256 toSend = amount * MAX_SHARES - claimedByRound[roundAddress];
+            // transfer to staking
+            token.transfer(address(staking), toSend);
+        }
     }
 }

@@ -16,19 +16,32 @@ contract LotteryBet is BetInterface, Ownable {
     uint256 private status; // 1 - created, 2 - win, 3 - lose, 4 - refund
     uint256 private result;
     address private player;
+    address private round;
+
+    bool private claimed = false;
     Library.Ticket[] private tickets;
+    uint256 private ticketsCount = 0;
 
     bool private symbolUnlocked = false;
 
     event PlayerChanged(address indexed player);
 
-    constructor(address _player, uint256 _amount, address _game, uint256 _tokenId) Ownable(_msgSender()) {
+    constructor(
+        address _player,
+        uint256 _amount,
+        address _game,
+        uint256 _tokenId,
+        address _round
+    )
+        Ownable(_msgSender())
+    {
         player = _player;
         amount = _amount;
         status = 1;
         game = _game;
         tokenId = _tokenId;
         created = block.timestamp;
+        round = _round;
     }
     /**
      * @return player - address of player
@@ -87,10 +100,18 @@ contract LotteryBet is BetInterface, Ownable {
         return tokenId;
     }
 
+    function getRound() external view returns (address) {
+        return round;
+    }
+
+    function getClaimed() external view returns (bool) {
+        return claimed;
+    }
+
     function getTickets() external view returns (bytes[] memory) {
         bytes[] memory _tickets = new bytes[](tickets.length);
         for (uint256 i = 0; i < tickets.length; i++) {
-            _tickets[i] = abi.encode(tickets[i]);
+            _tickets[i] = abi.encode(tickets[i].symbol, tickets[i].numbers);
         }
         return _tickets;
     }
@@ -102,10 +123,34 @@ contract LotteryBet is BetInterface, Ownable {
         if (tickets.length >= 3) {
             symbolUnlocked = true;
         }
+        ticketsCount = tickets.length;
+    }
+
+    function setResult(uint256 _result) external onlyOwner {
+        result = _result;
+        if (result > 0) {
+            status = 2;
+        } else {
+            status = 3;
+        }
+        claimed = true;
+    }
+
+    function calculateResult(Library.Ticket memory _winTicket) external view onlyOwner returns (uint256 coef) {
+        // iterate over tickets and check if any of them is a win
+        for (uint256 i = 0; i < tickets.length; i++) {
+            uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
+            coef += ticketCoef;
+        }
+        return coef;
     }
 
     function changePlayer(address _player) external onlyOwner {
         player = _player;
         emit PlayerChanged(_player);
+    }
+
+    function getTicketsCount() external view returns (uint256) {
+        return ticketsCount;
     }
 }

@@ -29,6 +29,8 @@ contract LotteryTest is Test {
     address public core = address(777);
     address public coordinator = address(888);
 
+    uint256 public ticketPrice;
+
     function setUp() public virtual {
         token = new Token(address(this));
         dynamicStaking = new DynamicStaking(address(token));
@@ -45,10 +47,14 @@ contract LotteryTest is Test {
             abi.encode(uint96(0), uint96(5 ether), uint64(0), address(lottery), consumers)
         );
         round = LotteryRound(lottery.createRound(block.timestamp + 30 days));
+        ticketPrice = round.ticketPrice();
+        token.transfer(address(dynamicStaking), 20_000_000_000 ether);
+        dynamicStaking.grantRole(dynamicStaking.TIMELOCK(), address(this));
+        dynamicStaking.addGame(address(lottery));
     }
 
     function placeBet(address _player, address _round, Library.Ticket[] memory _tickets) internal returns (address) {
-        uint256 amount = _tickets.length * 2500 ether;
+        uint256 amount = _tickets.length * ticketPrice;
         token.transfer(address(lottery), amount);
         bytes memory data = abi.encode(_round, _player, _tickets.length, _tickets);
         vm.prank(core);
@@ -64,7 +70,7 @@ contract LotteryTest is Test {
         internal
         returns (address)
     {
-        uint256 amount = _tickets.length * 2500 ether;
+        uint256 amount = _tickets.length * ticketPrice;
         token.transfer(address(lottery), amount);
         bytes memory data = abi.encode(_round, _player, _tickets.length, _tickets);
         vm.prank(core);
@@ -73,15 +79,15 @@ contract LotteryTest is Test {
     }
 
     function testPlaceBet_raw() public {
-        token.transfer(address(lottery), 2500 ether);
+        token.transfer(address(lottery), ticketPrice);
         vm.startPrank(core);
         Library.Ticket[] memory tickets = new Library.Ticket[](1);
         tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
         bytes memory data = abi.encode(address(round), alice, 1, tickets);
-        lottery.placeBet(alice, 2500 ether, data);
+        lottery.placeBet(alice, ticketPrice, data);
         vm.stopPrank();
         assertEq(token.balanceOf(address(lottery)), 0);
-        assertEq(token.balanceOf(address(round)), 2500 ether);
+        assertEq(token.balanceOf(address(round)), ticketPrice);
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 1);
     }
@@ -91,10 +97,10 @@ contract LotteryTest is Test {
         tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
         address bet = placeBet(alice, address(round), tickets);
         assertEq(token.balanceOf(address(lottery)), 0);
-        assertEq(token.balanceOf(address(round)), 2500 ether);
+        assertEq(token.balanceOf(address(round)), ticketPrice);
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 1);
-        assertEq(LotteryBet(bet).getAmount(), 2500 ether);
+        assertEq(LotteryBet(bet).getAmount(), ticketPrice);
         assertEq(LotteryBet(bet).getGame(), address(lottery));
         assertEq(LotteryBet(bet).getTokenId(), 1);
     }
@@ -105,10 +111,10 @@ contract LotteryTest is Test {
         tickets[1] = Library.Ticket(2, 124); // 1 and 00000000000000000001111100
         address bet = placeBet(alice, address(round), tickets);
         assertEq(token.balanceOf(address(lottery)), 0);
-        assertEq(token.balanceOf(address(round)), 5000 ether);
+        assertEq(token.balanceOf(address(round)), ticketPrice * 2);
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 2);
-        assertEq(LotteryBet(bet).getAmount(), 5000 ether);
+        assertEq(LotteryBet(bet).getAmount(), ticketPrice * 2);
         assertEq(LotteryBet(bet).getGame(), address(lottery));
         assertEq(LotteryBet(bet).getTokenId(), 1);
     }
@@ -126,7 +132,7 @@ contract LotteryTest is Test {
         placeBet(alice, address(round), tickets);
 
         assertEq(token.balanceOf(address(lottery)), 0);
-        assertEq(token.balanceOf(address(round)), 2500 ether);
+        assertEq(token.balanceOf(address(round)), ticketPrice);
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 1);
 
@@ -140,7 +146,7 @@ contract LotteryTest is Test {
         placeBet(alice, address(round), tickets);
 
         assertEq(token.balanceOf(address(lottery)), 0);
-        assertEq(token.balanceOf(address(round)), 5000 ether);
+        assertEq(token.balanceOf(address(round)), ticketPrice * 2);
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 2);
     }
@@ -219,7 +225,7 @@ contract LotteryTest is Test {
             coordinator, abi.encodeWithSelector(IVRFCoordinatorV2Plus.requestRandomWords.selector), abi.encode(555)
         );
         round.requestRandomness();
-
+        assertEq(token.balanceOf(address(lottery)), round.ticketPrice() * lottery.MAX_SHARES());
         assertEq(round.getStatus(), 2);
         uint256[] memory randomWords = new uint256[](6);
         randomWords[0] = 0;

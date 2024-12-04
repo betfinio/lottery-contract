@@ -12,6 +12,7 @@ import { Library } from "./Library.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2PlusClient.sol";
+import { console } from "forge-std/src/console.sol";
 
 /**
  * Errors:
@@ -36,8 +37,10 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
 
     uint256 private betsCount;
     uint256 private ticketsCount;
+    uint256 private betsClaimed;
     uint256 private finish;
     Lottery private lottery;
+    uint256 public ticketPrice;
 
     Library.Ticket public winTicket;
 
@@ -55,13 +58,15 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
 
     event RoundRequested(uint256 indexed requestId);
     event RoundFinished(Library.Ticket winTicket);
+    event TicketClaimed(address indexed bet);
 
     constructor(
         address _lottery,
         uint256 _finish,
         address _coordinator,
         uint256 _subscriptionId,
-        bytes32 _keyHash
+        bytes32 _keyHash,
+        uint256 _ticketPrice
     )
         VRFConsumerBaseV2Plus(_coordinator)
     {
@@ -72,6 +77,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         coordinator = IVRFCoordinatorV2Plus(_coordinator);
         keyHash = bytes32(_keyHash);
         status = 1;
+        ticketPrice = _ticketPrice;
     }
 
     function registerBet(address _bet) external onlyOwner {
@@ -101,6 +107,10 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(!isOpen(), "LR06");
         // check if the request period has passed
         require(block.timestamp < finish + REQUEST_PERIOD, "LR05");
+        // calculate the amount to reserve
+        uint256 toReserve = ticketPrice * lottery.MAX_SHARES();
+        // reserve funds
+        lottery.reserveFunds(toReserve);
         // update status
         status = 2;
         // request randomness
@@ -178,5 +188,18 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
             return 5;
         }
         return status;
+    }
+
+    function claim(address _bet) external onlyOwner returns (bool) {
+        // update counter
+        betsClaimed++;
+        // get bet from address¬
+        LotteryBet bet = LotteryBet(_bet);
+        // send token to staking
+        IERC20(lottery.getToken()).transfer(lottery.getStaking(), ticketPrice * bet.getTicketsCount());
+        // emit event
+        emit TicketClaimed(_bet);
+        // return true if all tickets are claimed
+        return betsClaimed == betsCount;
     }
 }
