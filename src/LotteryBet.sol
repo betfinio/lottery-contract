@@ -2,11 +2,12 @@
 pragma solidity ^0.8.25;
 
 import { BetInterface } from "./interfaces/BetInterface.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Library } from "./Library.sol";
 
-contract LotteryBet is BetInterface, Ownable {
+contract LotteryBet is BetInterface, AccessControl {
     bytes32 public constant LOTTERY = keccak256("LOTTERY");
+    bytes32 public constant ROUND = keccak256("ROUND");
 
     uint256 private immutable created;
     uint256 private immutable amount;
@@ -26,15 +27,7 @@ contract LotteryBet is BetInterface, Ownable {
 
     event PlayerChanged(address indexed player);
 
-    constructor(
-        address _player,
-        uint256 _amount,
-        address _game,
-        uint256 _tokenId,
-        address _round
-    )
-        Ownable(_msgSender())
-    {
+    constructor(address _player, uint256 _amount, address _game, uint256 _tokenId, address _round) {
         player = _player;
         amount = _amount;
         status = 1;
@@ -42,6 +35,8 @@ contract LotteryBet is BetInterface, Ownable {
         tokenId = _tokenId;
         created = block.timestamp;
         round = _round;
+        _grantRole(LOTTERY, _game);
+        _grantRole(ROUND, _round);
     }
     /**
      * @return player - address of player
@@ -116,7 +111,7 @@ contract LotteryBet is BetInterface, Ownable {
         return _tickets;
     }
 
-    function setTickets(Library.Ticket[] memory _tickets) external onlyOwner {
+    function setTickets(Library.Ticket[] memory _tickets) external onlyRole(LOTTERY) {
         for (uint256 i = 0; i < _tickets.length; i++) {
             tickets.push(_tickets[i]);
         }
@@ -126,7 +121,7 @@ contract LotteryBet is BetInterface, Ownable {
         ticketsCount = tickets.length;
     }
 
-    function setResult(uint256 _result) external onlyOwner {
+    function setResult(uint256 _result) external onlyRole(LOTTERY) {
         result = _result;
         if (result > 0) {
             status = 2;
@@ -136,7 +131,13 @@ contract LotteryBet is BetInterface, Ownable {
         claimed = true;
     }
 
-    function calculateResult(Library.Ticket memory _winTicket) external view onlyOwner returns (uint256 coef) {
+    function refund() external onlyRole(ROUND) {
+        require(status == 1, "LB01");
+        status = 4;
+        claimed = true;
+    }
+
+    function calculateResult(Library.Ticket memory _winTicket) external view onlyRole(LOTTERY) returns (uint256 coef) {
         // iterate over tickets and check if any of them is a win
         for (uint256 i = 0; i < tickets.length; i++) {
             uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
@@ -145,7 +146,7 @@ contract LotteryBet is BetInterface, Ownable {
         return coef;
     }
 
-    function changePlayer(address _player) external onlyOwner {
+    function changePlayer(address _player) external onlyRole(LOTTERY) {
         player = _player;
         emit PlayerChanged(_player);
     }

@@ -23,6 +23,9 @@ import { console } from "forge-std/src/console.sol";
  * LR05: Invalid request period
  * LR06: Round is open
  * LR07: Request failed
+ * LR08: Request period has passed
+ * LR09: Invalid status
+ * LR10: Invalid offset or limit
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
@@ -43,6 +46,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     uint256 public ticketPrice;
 
     Library.Ticket public winTicket;
+
+    address[] private bets;
 
     /*
     * Status:
@@ -174,7 +179,44 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         return bitmaps[bitmap] == address(0);
     }
 
+    function startRefund() external {
+        // check if the round is closed
+        require(!isOpen(), "LR06");
+        // check if the request period has passed
+        require(block.timestamp >= finish + REQUEST_PERIOD, "LR08");
+        // check if the round is pending
+        require(status == 1, "LR06");
+        // update status
+        status = 4;
+    }
+
+    function refund(uint256 offset, uint256 limit) external {
+        // check is round is in refund mode
+        require(status == 4, "LR09");
+        // check if offset and limit are valid
+        require(offset + limit <= betsCount, "LR10");
+        // iterate over bets
+        for (uint256 i = offset; i < offset + limit; i++) {
+            // get bet address
+            address bet = bets[i];
+            // get bet contract
+            LotteryBet betContract = LotteryBet(bet);
+            // transfer tokens back to player
+            IERC20(lottery.getToken()).transfer(bet, ticketPrice * betContract.getTicketsCount());
+            // set bet as refunded
+            betContract.refund();
+        }
+    }
+
+    function setWinTicket(Library.Ticket memory _winTicket) external onlyOwner {
+        winTicket = _winTicket;
+    }
+
     function updateFinish(uint256 _finish) external onlyOwner {
+        // check if already finished
+        require(isOpen(), "LR02");
+        // check if round is open
+        require(status == 1, "LR02");
         // new finish must be in future
         require(block.timestamp < _finish, "LR03");
         // new finish must be greater than current finish
