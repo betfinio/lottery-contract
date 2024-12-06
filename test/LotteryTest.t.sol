@@ -78,6 +78,53 @@ contract LotteryTest is Test {
         return lottery.placeBet(_player, amount, data);
     }
 
+    function testConstructor() public {
+        vm.mockCall(
+            address(coordinator),
+            abi.encodeWithSelector(IVRFSubscriptionV2Plus.createSubscription.selector),
+            abi.encode(0)
+        );
+        vm.expectRevert(bytes("LT06"));
+        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"));
+    }
+
+    function testPlaceBet_invalid() public {
+        // invalid count
+        token.transfer(address(lottery), ticketPrice);
+        vm.startPrank(core);
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        bytes memory data = abi.encode(address(round), alice, 2, tickets); // invalid count
+        vm.expectRevert(bytes("LT01"));
+        lottery.placeBet(alice, ticketPrice, data);
+
+        // more than MAX_TICKETS_PER_BET
+        Library.Ticket[] memory moreTickets = new Library.Ticket[](10);
+        moreTickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[1] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[2] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[3] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[4] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[5] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[6] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[7] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[8] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        moreTickets[9] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        bytes memory dataMoreTickets = abi.encode(address(round), alice, 10, tickets); // more than MAX_TICKETS_PER_BET
+        vm.expectRevert(bytes("LT01"));
+        lottery.placeBet(alice, ticketPrice, dataMoreTickets);
+    }
+
+    function testPlaceBet_invalidTicket() public {
+        token.transfer(address(lottery), ticketPrice);
+        vm.startPrank(core);
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 60); // 1 and 00000000000000000000111100  // invalid ticket
+        bytes memory data = abi.encode(address(round), alice, 1, tickets);
+        vm.expectRevert(bytes("LT07"));
+        lottery.placeBet(alice, ticketPrice, data);
+    }
+
     function testPlaceBet_raw() public {
         token.transfer(address(lottery), ticketPrice);
         vm.startPrank(core);

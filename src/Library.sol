@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
-import { console } from "forge-std/src/console.sol";
 
 /**
  * Error Codes:
@@ -46,19 +45,11 @@ library Library {
     * @param winner - winning ticket
     * @return coefficient of winning
     */
-    function compare(Ticket memory ticket, Ticket memory winner, bool symbolUnlocked) external view returns (uint256) {
-        // console.log("compare");
-        // console.log("ticket.symbol", ticket.symbol);
-        // console.log("ticket.numbers", ticket.numbers);
-        // console.log("winner.symbol", winner.symbol);
-        // console.log("winner.numbers", winner.numbers);
-        // console.log("symbolUnlocked", symbolUnlocked);
+    function compare(Ticket memory ticket, Ticket memory winner, bool symbolUnlocked) external pure returns (uint256) {
         // calculate same bits
         uint256 sameBits = ticket.numbers & winner.numbers;
         // calculate count of same bits
         uint8 count = countBits(uint32(sameBits));
-        // console.log("count", count);
-        // console.log("");
 
         // 1. check if 5 numbers are same
         if (count == 5) {

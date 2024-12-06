@@ -17,7 +17,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Library } from "./Library.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
-import { console } from "forge-std/src/console.sol";
 
 /**
  * Errors:
@@ -30,6 +29,7 @@ import { console } from "forge-std/src/console.sol";
  * LT07: Invalid ticket
  * LT08: Invalid claimer
  * LT09: Already claimed
+ * LT10: Calculation time
  */
 contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     using SafeERC20 for IERC20;
@@ -49,6 +49,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     CoreInterface private core;
     ERC20 private token;
 
+    uint256 public additionalJackpot;
     uint256 public subscriptionId;
 
     mapping(address round => bool exists) private rounds;
@@ -56,6 +57,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     mapping(address round => uint256 claimed) private claimedByRound;
 
     event RoundCreated(address indexed round, uint256 indexed timestamp);
+    event JackpotWon(address indexed round, uint256 indexed amount);
 
     constructor(
         address _staking,
@@ -144,6 +146,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     }
 
     function reserveFunds(uint256 amount) external onlyRole(ROUND) {
+		require(!staking.isCalculation(), "LT10");
         staking.reserveFunds(amount);
     }
 
@@ -218,13 +221,11 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         TICKET_PRICE = _price;
     }
 
-    function claim(uint256 id) external {
-        // check if owner of the ticket
-        require(ownerOf(id) == _msgSender(), "LT08");
-        _claim(id);
+    function updateJackpot(uint256 _jackpot) external onlyRole(ROUND) {
+        additionalJackpot += _jackpot;
     }
 
-    function claimByService(uint256 id) external onlyRole(SERVICE) {
+    function claim(uint256 id) external {
         _claim(id);
     }
 
@@ -243,13 +244,22 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         // parse win ticket
         (uint8 symbol, uint32 numbers) = round.winTicket();
         // calculate win coef
-        uint256 coef = bet.calculateResult(Library.Ticket({ symbol: symbol, numbers: numbers }));
+        (uint256 coef, bool jackpot) = bet.calculateResult(Library.Ticket({ symbol: symbol, numbers: numbers }));
         // calculate win amount
         uint256 winAmount = amount * coef;
         // check if win amount is greater than 0
         if (winAmount > 0) {
-            // transfer win amount to player
-            token.transfer(bet.getPlayer(), winAmount);
+            if (jackpot) {
+                // transfer jackpot to player
+                token.transfer(bet.getPlayer(), winAmount + additionalJackpot);
+                // reset additional jackpot
+                additionalJackpot = 0;
+                // emit Jackpot event
+                emit JackpotWon(roundAddress, additionalJackpot);
+            } else {
+                // transfer win amount to player
+                token.transfer(bet.getPlayer(), winAmount);
+            }
         }
         // set bet result and status
         bet.setResult(winAmount);
@@ -260,7 +270,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         // check if all tickets are claimed
         if (allClaimed) {
             // transfer back to staking =  initial amount - claimed amount
-            uint256 toSend = amount * MAX_SHARES - claimedByRound[roundAddress];
+            uint256 toSend = amount * MAX_SHARES - claimedByRound[roundAddress] - additionalJackpot;
             // transfer to staking
             token.transfer(address(staking), toSend);
         }

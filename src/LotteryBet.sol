@@ -137,13 +137,23 @@ contract LotteryBet is BetInterface, AccessControl {
         claimed = true;
     }
 
-    function calculateResult(Library.Ticket memory _winTicket) external view onlyRole(LOTTERY) returns (uint256 coef) {
+    function calculateResult(
+        Library.Ticket memory _winTicket
+    )
+        external
+        view
+        onlyRole(LOTTERY)
+        returns (uint256 coef, bool jackpot)
+    {
         // iterate over tickets and check if any of them is a win
         for (uint256 i = 0; i < tickets.length; i++) {
             uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
+            if (ticketCoef == 33_334) {
+                jackpot = true;
+            }
             coef += ticketCoef;
         }
-        return coef;
+        return (coef, jackpot);
     }
 
     function changePlayer(address _player) external onlyRole(LOTTERY) {
@@ -153,5 +163,9 @@ contract LotteryBet is BetInterface, AccessControl {
 
     function getTicketsCount() external view returns (uint256) {
         return ticketsCount;
+    }
+
+    function isSymbolUnlocked() external view returns (bool) {
+        return symbolUnlocked;
     }
 }

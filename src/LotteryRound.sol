@@ -12,7 +12,6 @@ import { Library } from "./Library.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2PlusClient.sol";
-import { console } from "forge-std/src/console.sol";
 
 /**
  * Errors:
@@ -26,6 +25,7 @@ import { console } from "forge-std/src/console.sol";
  * LR08: Request period has passed
  * LR09: Invalid status
  * LR10: Invalid offset or limit
+ * LR11: Transfer failed
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
@@ -46,6 +46,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     uint256 public ticketPrice;
 
     Library.Ticket public winTicket;
+
+    bool public jackpotWon = false;
 
     address[] private bets;
 
@@ -108,6 +110,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     }
 
     function requestRandomness() external {
+        require(!StakingInterface(lottery.getStaking()).isCalculation(), "LT10");
         // check if the round is closed
         require(!isOpen(), "LR06");
         // check if the request period has passed
@@ -151,6 +154,26 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         uint32 numbers = uint32(2 ** number1 + 2 ** number2 + 2 ** number3 + 2 ** number4 + 2 ** number5);
 
         winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
+
+        // get jackpot ticket bitmap
+        bytes memory winMap = abi.encode(winTicket.symbol, winTicket.numbers);
+        // calculate 3% of bets
+        uint256 jackpot = ticketsCount * ticketPrice * 3 / 100;
+        // send jackpot to lottery
+        require(IERC20(lottery.getToken()).transfer(address(lottery), jackpot), "LR11");
+        // update jackpot
+        lottery.updateJackpot(jackpot);
+        // check if jackpot ticket is registered
+        if (!isBitmapEmpty(winMap)) {
+            // check if jackpot is won - symbol unlocked
+            LotteryBet winBet = LotteryBet(bitmaps[winMap]);
+            if (winBet.isSymbolUnlocked()) {
+                // mark as jackpot won
+                jackpotWon = true;
+                // claim jackpot
+                lottery.claim(LotteryBet(bitmaps[winMap]).getTokenId());
+            }
+        }
         // emit event
         emit RoundFinished(winTicket);
     }
@@ -235,10 +258,12 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     function claim(address _bet) external onlyOwner returns (bool) {
         // update counter
         betsClaimed++;
-        // get bet from address¬
+        // get bet from address
         LotteryBet bet = LotteryBet(_bet);
-        // send token to staking
-        IERC20(lottery.getToken()).transfer(lottery.getStaking(), ticketPrice * bet.getTicketsCount());
+        // calculate amount to send
+        uint256 amountToSend = ticketPrice * bet.getTicketsCount() * 97 / 100;
+        // send tokens - 3% to staking
+        IERC20(lottery.getToken()).transfer(lottery.getStaking(), amountToSend);
         // emit event
         emit TicketClaimed(_bet);
         // return true if all tickets are claimed

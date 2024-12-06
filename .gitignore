@@ -20,9 +20,14 @@ broadcast/*
 broadcast/*/31337/
 
 
+abis/*
+
 .env
 
 deno/
 
 
 .idea/
+
+
+script/*
