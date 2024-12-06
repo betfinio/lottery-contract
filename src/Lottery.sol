@@ -30,6 +30,7 @@ import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/I
  * LT08: Invalid claimer
  * LT09: Already claimed
  * LT10: Calculation time
+ * LT11: Invalid id
  */
 contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     using SafeERC20 for IERC20;
@@ -146,7 +147,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     }
 
     function reserveFunds(uint256 amount) external onlyRole(ROUND) {
-		require(!staking.isCalculation(), "LT10");
+        require(!staking.isCalculation(), "LT10");
         staking.reserveFunds(amount);
     }
 
@@ -232,6 +233,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     function _claim(uint256 id) internal {
         // get bet address
         address betAddress = bets[id];
+        require(betAddress != address(0), "LT11");
         // get bet contract
         LotteryBet bet = LotteryBet(betAddress);
         require(bet.getClaimed() == false, "LT09");
