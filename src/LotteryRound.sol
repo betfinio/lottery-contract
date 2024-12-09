@@ -109,6 +109,32 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * lottery.TICKET_PRICE(), "LR04");
     }
 
+    function editTickets(address _bet, Library.Ticket[] memory _tickets) external onlyOwner {
+        // get bet contract
+        LotteryBet bet = LotteryBet(_bet);
+        // get old tickets
+        bytes[] memory oldTickets = bet.getTickets();
+        require(oldTickets.length == _tickets.length, "LR01");
+        // remove old bitmaps
+        for (uint256 i = 0; i < oldTickets.length; i++) {
+            // get bitmap
+            bytes memory bitmap = oldTickets[i];
+            // check if bitmap is empty
+            require(!isBitmapEmpty(bitmap), "LR01");
+            // remove bitmap
+            delete bitmaps[bitmap];
+        }
+        // interate over tickets and save new bitmaps
+        for (uint256 i = 0; i < _tickets.length; i++) {
+            // get bitmap
+            bytes memory bitmap = abi.encode(_tickets[i].symbol, _tickets[i].numbers);
+            // check if bitmap is empty
+            require(isBitmapEmpty(bitmap), "LR01");
+            // save bitmap
+            bitmaps[bitmap] = _bet;
+        }
+    }
+
     function requestRandomness() external {
         require(!StakingInterface(lottery.getStaking()).isCalculation(), "LT10");
         // check if the round is closed

@@ -59,6 +59,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     event RoundCreated(address indexed round, uint256 indexed timestamp);
     event JackpotWon(address indexed round, uint256 indexed amount);
+    event TicketsEdited(uint256 indexed id, address indexed bet);
 
     constructor(
         address _staking,
@@ -230,12 +231,35 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         _claim(id);
     }
 
+    function editTicket(uint256 id, Library.Ticket[] memory _newTickets) external {
+        // get bet address
+        address betAddress = bets[id];
+        // check if bet exists
+        require(betAddress != address(0), "LT11");
+        // get bet contract
+        LotteryBet bet = LotteryBet(betAddress);
+        // check if claimed
+        require(!bet.getClaimed(), "LT09");
+        // check count of tickets
+        require(_newTickets.length == bet.getTicketsCount(), "LT01");
+        // get round address
+        address roundAddress = bet.getRound();
+        // get round
+        LotteryRound round = LotteryRound(roundAddress);
+        // edit tickets in round
+        round.editTickets(betAddress, _newTickets);
+        // set tickets in bet
+        bet.setTickets(_newTickets);
+        emit TicketsEdited(id, betAddress);
+    }
+
     function _claim(uint256 id) internal {
         // get bet address
         address betAddress = bets[id];
         require(betAddress != address(0), "LT11");
         // get bet contract
         LotteryBet bet = LotteryBet(betAddress);
+        // check if claimed
         require(bet.getClaimed() == false, "LT09");
         // get round address
         address roundAddress = bet.getRound();
