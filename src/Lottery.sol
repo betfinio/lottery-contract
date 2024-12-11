@@ -53,8 +53,8 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     uint256 public additionalJackpot;
     uint256 public subscriptionId;
 
-    mapping(address round => bool exists) private rounds;
-    mapping(uint256 tokenId => address bet) private bets;
+    mapping(address round => bool exists) public rounds;
+    mapping(uint256 tokenId => address bet) public bets;
     mapping(address round => uint256 claimed) private claimedByRound;
 
     event RoundCreated(address indexed round, uint256 indexed timestamp);
