@@ -326,4 +326,27 @@ contract LotteryClaimTest is Test {
             ticketPrice * (33_334 + 13_334 + 13_334 + 13_334) + 4 * ticketPrice * 3 / 100
         );
     }
+
+    function testPreClaimIssue() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](3);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110 = [1,2,3,4,5] & 1
+        tickets[1] = Library.Ticket(2, 1984); // 2 and 00000000000000011111000000 = [6,7,8,9,10] & 2
+        tickets[2] = Library.Ticket(3, 63_488); // 3 and 00000000001111100000000000 = [11,12,13,14,15] & 3
+        placeBet(alice, address(round), tickets);
+
+        Library.Ticket[] memory tickets1 = new Library.Ticket[](1);
+        tickets1[0] = Library.Ticket(2, 94); // 2 and 00000000000000000001011110 = [1,2,3,4,6] & 2
+        address _bet1 = placeBet(bob, address(round), tickets1);
+        LotteryBet bet1 = LotteryBet(_bet1);
+        uint256 tokenId1 = bet1.getTokenId();
+
+		vm.expectRevert(bytes("LT12"));
+        lottery.claim(1);
+        // vm.warp(block.timestamp + 30 days + 30 minutes);
+        // fulfill(1, 2, 3, 4, 5, 1, address(round));
+        // (uint8 symbol, uint32 numbers) = round.winTicket();
+        // assertEq(symbol, 1);
+        // assertEq(numbers, 62);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 33_334 + (ticketPrice * 3) * 3 / 100);
+    }
 }

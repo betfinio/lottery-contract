@@ -31,6 +31,7 @@ import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/I
  * LT09: Already claimed
  * LT10: Calculation time
  * LT11: Invalid id
+ * LT12: Invalid roun status to claim
  */
 contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     using SafeERC20 for IERC20;
@@ -267,6 +268,8 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         address roundAddress = bet.getRound();
         // get round contract
         LotteryRound round = LotteryRound(roundAddress);
+        // check that round has ended
+        require(round.getStatus() == 3, "LT12");
         // get ticket price
         uint256 amount = round.ticketPrice();
         // parse win ticket
