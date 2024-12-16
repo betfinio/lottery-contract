@@ -288,4 +288,55 @@ contract LotteryTest is Test {
         assertEq(symbol, 1);
         assertEq(numbers, 62);
     }
+
+    function repeatedRequestsAndfulfill(
+        uint32 n1,
+        uint32 n2,
+        uint32 n3,
+        uint32 n4,
+        uint32 n5,
+        uint8 s,
+        address _round
+    )
+        internal
+    {
+        LotteryRound r = LotteryRound(_round);
+        vm.mockCall(
+            coordinator, abi.encodeWithSelector(IVRFCoordinatorV2Plus.requestRandomWords.selector), abi.encode(555)
+        );
+        r.requestRandomness(); // First request
+        vm.mockCall(
+            coordinator, abi.encodeWithSelector(IVRFCoordinatorV2Plus.requestRandomWords.selector), abi.encode(556)
+        );
+        vm.expectRevert(bytes("LR12"));
+        r.requestRandomness(); // Second request
+        uint256[] memory randomWords = new uint256[](6);
+        randomWords[0] = n1 - 1;
+        randomWords[1] = n2 - 1;
+        randomWords[2] = n3 - 1;
+        randomWords[3] = n4 - 1;
+        randomWords[4] = n5 - 1;
+        randomWords[5] = s - 1;
+        vm.startPrank(address(coordinator));
+        LotteryRound(_round).rawFulfillRandomWords(555, randomWords); // First fulfill fails
+        vm.stopPrank();
+        vm.prank(address(coordinator));
+        vm.expectRevert(bytes("LR07"));
+        LotteryRound(_round).rawFulfillRandomWords(556, randomWords); // Second fulfill success
+        assertEq(round.getStatus(), 3);
+    }
+
+    function testRepeatedFulfill() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110 = [1,2,3,4,5] & 1
+        address _bet = placeBet(alice, address(round), tickets);
+        LotteryBet bet = LotteryBet(_bet);
+        uint256 tokenId = bet.getTokenId();
+        vm.warp(block.timestamp + 30 days + 30 minutes);
+        repeatedRequestsAndfulfill(1, 2, 23, 24, 25, 1, address(round));
+        vm.startPrank(alice);
+        lottery.claim(tokenId);
+        vm.stopPrank();
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 0);
+    }
 }

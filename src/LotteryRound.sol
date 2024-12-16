@@ -26,6 +26,7 @@ import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2Plu
  * LR09: Invalid status
  * LR10: Invalid offset or limit
  * LR11: Transfer failed
+ * LR12: invalidat round status to request
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
@@ -141,6 +142,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(!isOpen(), "LR06");
         // check if the request period has passed
         require(block.timestamp < finish + REQUEST_PERIOD, "LR05");
+        // check that round status is correct
+        require(getStatus() == 5, "LR12");
         // calculate the amount to reserve
         uint256 toReserve = ticketPrice * lottery.MAX_SHARES();
         // reserve funds
@@ -167,6 +170,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
         // check requrst id
         require(_requestId == requestId, "LR07");
+		// check status
+		require(getStatus() == 2, "LR07");
         // update status
         status = 3;
         // create result
@@ -274,7 +279,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         finish = _finish;
     }
 
-    function getStatus() external view returns (uint8) {
+    function getStatus() public view returns (uint8) {
         if (!isOpen() && status == 1) {
             return 5;
         }
