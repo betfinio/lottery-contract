@@ -111,21 +111,22 @@ contract LotteryBet is BetInterface, AccessControl {
     }
 
     function getTickets() external view returns (bytes[] memory) {
-        bytes[] memory _tickets = new bytes[](tickets.length);
-        for (uint256 i = 0; i < tickets.length; i++) {
+        bytes[] memory _tickets = new bytes[](ticketsCount);
+        for (uint256 i = 0; i < ticketsCount; i++) {
             _tickets[i] = abi.encode(tickets[i].symbol, tickets[i].numbers);
         }
         return _tickets;
     }
 
     function setTickets(Library.Ticket[] memory _tickets) external onlyRole(LOTTERY) {
-        for (uint256 i = 0; i < _tickets.length; i++) {
+        delete tickets;
+        ticketsCount = _tickets.length;
+        for (uint256 i = 0; i < ticketsCount; i++) {
             tickets.push(_tickets[i]);
         }
-        if (tickets.length >= 3) {
+        if (ticketsCount >= 3) {
             symbolUnlocked = true;
         }
-        ticketsCount = tickets.length;
     }
 
     function setResult(uint256 _result) external onlyRole(LOTTERY) {
@@ -153,7 +154,7 @@ contract LotteryBet is BetInterface, AccessControl {
         returns (uint256 coef, bool jackpot)
     {
         // iterate over tickets and check if any of them is a win
-        for (uint256 i = 0; i < tickets.length; i++) {
+        for (uint256 i = 0; i < ticketsCount; i++) {
             uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
             if (ticketCoef == 33_334) {
                 jackpot = true;

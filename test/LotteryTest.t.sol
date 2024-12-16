@@ -390,4 +390,21 @@ contract LotteryTest is Test {
         // assertEq(LotteryBet(bet).getGame(), address(lottery));
         // assertEq(LotteryBet(bet).getTokenId(), 1);
     }
+
+    function testEditTicket() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        address _bet = placeBet(alice, address(round), tickets);
+        LotteryBet bet = LotteryBet(_bet);
+        uint256 tokenId = bet.getTokenId();
+        vm.assertEq(lottery.balanceOf(address(alice)), 1);
+        vm.assertEq(bet.getPlayer(), alice);
+        vm.assertEq(lottery.ownerOf(tokenId), alice);
+
+        tickets[0] = Library.Ticket(5, 62); // 5 and 00000000000000000000111110
+        vm.prank(alice);
+        lottery.editTicket(tokenId, tickets);
+
+        assertEq(bet.getTicketsCount(), 1);
+    }
 }
