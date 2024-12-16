@@ -339,4 +339,34 @@ contract LotteryTest is Test {
         vm.stopPrank();
         assertEq(token.balanceOf(address(alice)), ticketPrice * 0);
     }
+
+    function testNormalRefund() public {
+
+        // Alice places a single ticket bet
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // any valid ticket
+        address betAddr = placeBet(alice, address(round), tickets);
+        LotteryBet bet = LotteryBet(betAddr);
+        uint256 betTokenId = bet.getTokenId();
+
+        // Move forward in time past the round finish
+        vm.warp(block.timestamp + 30 days + 2 hours); // After round finish + request period
+
+        // Start refunds
+        round.startRefund();
+        // Status should be 4 (refund)
+        assertEq(round.getStatus(), 4);
+
+        // Perform the actual refund
+        // There's only 1 bet, so offset=0 and limit=1 is valid
+        uint256 aliceBalanceBefore = token.balanceOf(alice);
+        round.refund(0, 1);
+        // Alice should receive her ticket price back
+        uint256 aliceBalanceAfter = token.balanceOf(alice);
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, ticketPrice);
+
+        // Ensure we cannot refund again (no double refunds)
+        vm.expectRevert();
+        round.refund(0, 1); // Attempt to refund again should fail
+    }
 }

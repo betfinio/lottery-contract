@@ -106,6 +106,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         }
         // update bet counter
         betsCount++;
+        bets.push(_bet);
         // check balance of round - should not happen, but anyway
         require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * lottery.TICKET_PRICE(), "LR04");
     }
@@ -170,8 +171,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
         // check requrst id
         require(_requestId == requestId, "LR07");
-		// check status
-		require(getStatus() == 2, "LR07");
+        // check status
+        require(getStatus() == 2, "LR07");
         // update status
         status = 3;
         // create result
@@ -256,7 +257,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
             // get bet contract
             LotteryBet betContract = LotteryBet(bet);
             // transfer tokens back to player
-            IERC20(lottery.getToken()).transfer(bet, ticketPrice * betContract.getTicketsCount());
+            IERC20(lottery.getToken()).transfer(betContract.getPlayer(), ticketPrice * betContract.getTicketsCount());
             // set bet as refunded
             betContract.refund();
         }
