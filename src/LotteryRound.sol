@@ -263,10 +263,6 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         }
     }
 
-    function setWinTicket(Library.Ticket memory _winTicket) external onlyOwner {
-        winTicket = _winTicket;
-    }
-
     function updateFinish(uint256 _finish) external onlyOwner {
         // check if already finished
         require(isOpen(), "LR02");
