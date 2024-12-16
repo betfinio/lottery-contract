@@ -340,7 +340,7 @@ contract LotteryClaimTest is Test {
         LotteryBet bet1 = LotteryBet(_bet1);
         uint256 tokenId1 = bet1.getTokenId();
 
-		vm.expectRevert(bytes("LT12"));
+        vm.expectRevert(bytes("LT12"));
         lottery.claim(1);
         // vm.warp(block.timestamp + 30 days + 30 minutes);
         // fulfill(1, 2, 3, 4, 5, 1, address(round));
@@ -348,5 +348,36 @@ contract LotteryClaimTest is Test {
         // assertEq(symbol, 1);
         // assertEq(numbers, 62);
         // assertEq(token.balanceOf(address(alice)), ticketPrice * 33_334 + (ticketPrice * 3) * 3 / 100);
+    }
+
+    function testRemainingTokensInContract() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 0000000000000000000111110 = [1,2,3,4,5] & 1
+        address _bet = placeBet(alice, address(round), tickets);
+        LotteryBet bet = LotteryBet(_bet);
+        uint256 tokenId = bet.getTokenId();
+        vm.warp(block.timestamp + 30 days + 30 minutes);
+
+        fulfill(1, 2, 3, 4, 5, 1, address(round));
+        assertEq(token.balanceOf(address(lottery)), ticketPrice * 213_770 + ticketPrice * 3 / 100);
+        assertEq(token.balanceOf(address(round)), ticketPrice - ticketPrice * 3 / 100);
+        console.log("After fulfilling, remaining tokens in LotteryRound contract: ", token.balanceOf(address(round)));
+        console.log("After fulfilling, remaining tokens in Lottery contract: ", token.balanceOf(address(lottery)));
+
+        (uint8 symbol, uint32 numbers) = round.winTicket();
+        assertEq(symbol, 1);
+        assertEq(numbers, 62);
+
+        vm.startPrank(alice);
+        lottery.claim(tokenId);
+        vm.stopPrank();
+
+        console.log("After claiming, remaining tokens in LotteryRound contract: ", token.balanceOf(address(round)));
+        console.log("After claiming, remaining tokens in Lottery contract: ", token.balanceOf(address(lottery)));
+        console.log("The value of additionalJackpot is: ", lottery.additionalJackpot());
+
+        assertEq(lottery.additionalJackpot(), token.balanceOf(address(lottery)));
+
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
     }
 }

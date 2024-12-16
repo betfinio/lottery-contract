@@ -301,7 +301,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         // check if all tickets are claimed
         if (allClaimed) {
             // transfer back to staking =  initial amount - claimed amount
-            uint256 toSend = amount * MAX_SHARES - claimedByRound[roundAddress] - additionalJackpot;
+            uint256 toSend = amount * MAX_SHARES - claimedByRound[roundAddress];
             // transfer to staking
             token.transfer(address(staking), toSend);
         }

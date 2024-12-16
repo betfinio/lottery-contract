@@ -341,7 +341,6 @@ contract LotteryTest is Test {
     }
 
     function testNormalRefund() public {
-
         // Alice places a single ticket bet
         Library.Ticket[] memory tickets = new Library.Ticket[](1);
         tickets[0] = Library.Ticket(1, 62); // any valid ticket
@@ -369,4 +368,5 @@ contract LotteryTest is Test {
         vm.expectRevert();
         round.refund(0, 1); // Attempt to refund again should fail
     }
+
 }
