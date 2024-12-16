@@ -5,6 +5,10 @@ import { BetInterface } from "./interfaces/BetInterface.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Library } from "./Library.sol";
 
+/**
+ * Error codes:
+ * LB02: address is zero
+ */
 contract LotteryBet is BetInterface, AccessControl {
     bytes32 public constant LOTTERY = keccak256("LOTTERY");
     bytes32 public constant ROUND = keccak256("ROUND");
@@ -28,6 +32,9 @@ contract LotteryBet is BetInterface, AccessControl {
     event PlayerChanged(address indexed player);
 
     constructor(address _player, uint256 _amount, address _game, uint256 _tokenId, address _round) {
+        require(_player != address(0), "LB02");
+        require(_round != address(0), "LB02");
+        require(_game != address(0), "LB02");
         player = _player;
         amount = _amount;
         status = 1;
@@ -157,6 +164,7 @@ contract LotteryBet is BetInterface, AccessControl {
     }
 
     function changePlayer(address _player) external onlyRole(LOTTERY) {
+        require(_player != address(0), "LB02");
         player = _player;
         emit PlayerChanged(_player);
     }
