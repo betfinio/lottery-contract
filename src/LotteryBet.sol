@@ -145,14 +145,7 @@ contract LotteryBet is BetInterface, AccessControl {
         claimed = true;
     }
 
-    function calculateResult(
-        Library.Ticket memory _winTicket
-    )
-        external
-        view
-        onlyRole(LOTTERY)
-        returns (uint256 coef, bool jackpot)
-    {
+    function calculateResult(Library.Ticket memory _winTicket) external view returns (uint256 coef, bool jackpot) {
         // iterate over tickets and check if any of them is a win
         for (uint256 i = 0; i < ticketsCount; i++) {
             uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
