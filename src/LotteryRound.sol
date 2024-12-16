@@ -111,7 +111,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // push bet to bets
         bets.push(_bet);
         // check balance of round - should not happen, but anyway
-        require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * lottery.TICKET_PRICE(), "LR04");
+        require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * ticketPrice, "LR04");
     }
 
     function editTickets(address _bet, Library.Ticket[] memory _tickets) external onlyOwner {
