@@ -36,6 +36,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     uint256 private immutable subscriptionId;
     bytes32 private immutable keyHash;
     IVRFCoordinatorV2Plus private immutable coordinator;
+    Lottery private immutable lottery;
 
     mapping(bytes bitmap => address bet) public bitmaps;
 
@@ -43,7 +44,6 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     uint256 private ticketsCount;
     uint256 private betsClaimed;
     uint256 private finish;
-    Lottery private lottery;
     uint256 public ticketPrice;
 
     Library.Ticket public winTicket;

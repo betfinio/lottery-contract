@@ -17,11 +17,11 @@ contract LotteryBet is BetInterface, AccessControl {
     uint256 private immutable amount;
     address private immutable game;
     uint256 private immutable tokenId; // tokenId of Lottery{ERC721}
+    address private immutable round;
 
     uint256 private status; // 1 - created, 2 - win, 3 - lose, 4 - refund
     uint256 private result;
     address private player;
-    address private round;
 
     bool private claimed = false;
     Library.Ticket[] private tickets;
