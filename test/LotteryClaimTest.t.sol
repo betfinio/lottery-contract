@@ -41,7 +41,7 @@ contract LotteryClaimTest is Test {
             abi.encodeWithSelector(IVRFSubscriptionV2Plus.createSubscription.selector),
             abi.encode(5)
         );
-        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"));
+        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this));
         address[] memory consumers = new address[](0);
         vm.mockCall(
             address(coordinator),

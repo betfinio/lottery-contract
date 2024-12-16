@@ -67,7 +67,8 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         address _core,
         address _service,
         address _coordinator,
-        bytes32 _keyHash
+        bytes32 _keyHash,
+        address admin
     )
         ERC721("Betfin Lottery Ticket", "BLT")
     {
@@ -81,6 +82,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         require(subscriptionId > 0, "LT06");
         _grantRole(SERVICE, _service);
         _grantRole(CORE, _core);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     function placeBet(
