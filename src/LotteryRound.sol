@@ -95,17 +95,20 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         LotteryBet bet = LotteryBet(_bet);
         // extract tickets from bet
         bytes[] memory _bitmaps = bet.getTickets();
+        // save count for gas cost
+        uint256 count = _bitmaps.length;
         // check validity of the tickets
-        for (uint256 i = 0; i < _bitmaps.length; i++) {
+        for (uint256 i = 0; i < count; i++) {
             // validate if ticket is empty
             require(isBitmapEmpty(_bitmaps[i]), "LR01");
             // save bitmap
             bitmaps[_bitmaps[i]] = _bet;
-            // update ticket counter
-            ticketsCount++;
         }
+        // update ticket counter
+        ticketsCount += count;
         // update bet counter
         betsCount++;
+        // push bet to bets
         bets.push(_bet);
         // check balance of round - should not happen, but anyway
         require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * lottery.TICKET_PRICE(), "LR04");
