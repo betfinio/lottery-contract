@@ -273,9 +273,9 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         // get ticket price
         uint256 amount = round.ticketPrice();
         // parse win ticket
-        (uint8 symbol, uint32 numbers) = round.winTicket();
+        (uint8 _symbol, uint32 numbers) = round.winTicket();
         // calculate win coef
-        (uint256 coef, bool jackpot) = bet.calculateResult(Library.Ticket({ symbol: symbol, numbers: numbers }));
+        (uint256 coef, bool jackpot) = bet.calculateResult(Library.Ticket({ symbol: _symbol, numbers: numbers }));
         // calculate win amount
         uint256 winAmount = amount * coef;
         // check if win amount is greater than 0
