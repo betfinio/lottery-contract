@@ -27,6 +27,7 @@ import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2Plu
  * LR10: Invalid offset or limit
  * LR11: Transfer failed
  * LR12: invalidat round status to request
+ * LR13: could not restart request - conditions are not met
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
@@ -61,8 +62,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     * 5 - waiting for request
     */
     uint8 private status;
-
     uint256 private requestId;
+    uint256 public requestedTime;
 
     event RoundRequested(uint256 indexed requestId);
     event RoundFinished(Library.Ticket winTicket);
@@ -154,6 +155,17 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         lottery.reserveFunds(toReserve);
         // update status
         status = 2;
+        _requestRandomness();
+    }
+
+    function requestAgain() external {
+        // only if status = 2 and requestTime + 24 hours
+        require(status == 2 && ((requestedTime + 1 days) < block.timestamp), "LR13");
+        _requestRandomness();
+    }
+
+    function _requestRandomness() internal {
+        requestedTime = block.timestamp;
         // request randomness
         requestId = coordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
