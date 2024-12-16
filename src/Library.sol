@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
-
 /**
  * Error Codes:
  * LB01: Invalid ticket
@@ -17,6 +16,10 @@ library Library {
     // possible numbers: 1-25
 
     function validate(Ticket calldata ticket) public pure returns (bool) {
+		// 25 bits set max (2^25 - 1)
+        if (ticket.numbers > 0x1FFFFFF) {
+            return false;
+        }
         // validate symbol
         if (ticket.symbol == 0 || ticket.symbol >= 6) {
             return false;

@@ -369,4 +369,25 @@ contract LotteryTest is Test {
         round.refund(0, 1); // Attempt to refund again should fail
     }
 
+    function testPlaceBetOneTicketWithNumberLargerThan25_fail() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        uint256[] memory numberList = new uint256[](5);
+        numberList[0] = 26;
+        numberList[1] = 1;
+        numberList[2] = 30;
+        numberList[3] = 25;
+        numberList[4] = 2;
+        uint32 number = uint32(
+            2 ** numberList[0] + 2 ** numberList[1] + 2 ** numberList[2] + 2 ** numberList[3] + 2 ** numberList[4]
+        );
+        tickets[0] = Library.Ticket(1, number);
+        placeBetFail(alice, address(round), tickets, bytes("LT07"));
+        // assertEq(token.balanceOf(address(lottery)), 0);
+        // assertEq(token.balanceOf(address(round)), ticketPrice);
+        // assertEq(round.getBetsCount(), 1);
+        // assertEq(round.getTicketsCount(), 1);
+        // assertEq(LotteryBet(bet).getAmount(), ticketPrice);
+        // assertEq(LotteryBet(bet).getGame(), address(lottery));
+        // assertEq(LotteryBet(bet).getTokenId(), 1);
+    }
 }
