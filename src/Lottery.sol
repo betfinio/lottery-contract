@@ -42,7 +42,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     uint256 public constant MAX_TICKETS_PER_BET = 9;
     uint256 public constant MAX_SHARES = 213_770;
-    uint256 public TICKET_PRICE = 1500 ether;
+    uint256 public ticketPrice = 1500 ether;
 
     uint256 private immutable created;
     IVRFCoordinatorV2Plus private immutable coordinator;
@@ -133,7 +133,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     function createRound(uint256 _timestamp) external onlyRole(SERVICE) returns (address) {
         // create new round
         LotteryRound round =
-            new LotteryRound(address(this), _timestamp, address(coordinator), subscriptionId, keyHash, TICKET_PRICE);
+            new LotteryRound(address(this), _timestamp, address(coordinator), subscriptionId, keyHash, ticketPrice);
         // register round
         rounds[address(round)] = true;
         // set round as consumer
@@ -223,7 +223,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     }
 
     function setTicketPrice(uint256 _price) external onlyRole(SERVICE) {
-        TICKET_PRICE = _price;
+        ticketPrice = _price;
     }
 
     function updateJackpot(uint256 _jackpot) external onlyRole(ROUND) {
@@ -271,7 +271,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         // get round contract
         LotteryRound round = LotteryRound(roundAddress);
         // check that round has ended
-        require(round.getStatus() == 3, "LT12");
+        require(round.getStatus() == 4, "LT12");
         // get ticket price
         uint256 amount = round.ticketPrice();
         // parse win ticket

@@ -2,11 +2,6 @@
 pragma solidity >=0.8.25 <0.9.0;
 
 import { Test } from "forge-std/src/Test.sol";
-import { CoreInterface } from "src/interfaces/CoreInterface.sol";
-import { PartnerInterface } from "src/interfaces/PartnerInterface.sol";
-import { StakingInterface } from "src/interfaces/StakingInterface.sol";
-import { PassInterface } from "src/interfaces/PassInterface.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Token } from "src/Token.sol";
 import { Lottery } from "src/Lottery.sol";
 import { Library } from "src/Library.sol";
@@ -14,7 +9,6 @@ import { LotteryBet } from "src/LotteryBet.sol";
 import { LotteryRound } from "src/LotteryRound.sol";
 import { DynamicStaking } from "./DynamicStaking.sol";
 import { IVRFSubscriptionV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFSubscriptionV2Plus.sol";
-import { console } from "forge-std/src/console.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 
 contract LotteryTest is Test {
@@ -39,7 +33,9 @@ contract LotteryTest is Test {
             abi.encodeWithSelector(IVRFSubscriptionV2Plus.createSubscription.selector),
             abi.encode(5)
         );
-        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this));
+        lottery = new Lottery(
+            address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this)
+        );
         address[] memory consumers = new address[](0);
         vm.mockCall(
             address(coordinator),
@@ -85,7 +81,9 @@ contract LotteryTest is Test {
             abi.encode(0)
         );
         vm.expectRevert(bytes("LT06"));
-        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this));
+        lottery = new Lottery(
+            address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this)
+        );
     }
 
     function testPlaceBet_invalid() public {
@@ -334,6 +332,7 @@ contract LotteryTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         repeatedRequestsAndfulfill(1, 2, 23, 24, 25, 1, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -346,15 +345,15 @@ contract LotteryTest is Test {
         tickets[0] = Library.Ticket(1, 62); // any valid ticket
         address betAddr = placeBet(alice, address(round), tickets);
         LotteryBet bet = LotteryBet(betAddr);
-        uint256 betTokenId = bet.getTokenId();
+        bet.getTokenId();
 
         // Move forward in time past the round finish
         vm.warp(block.timestamp + 30 days + 2 hours); // After round finish + request period
 
         // Start refunds
         round.startRefund();
-        // Status should be 4 (refund)
-        assertEq(round.getStatus(), 4);
+        // Status should be 6 (refund)
+        assertEq(round.getStatus(), 6);
 
         // Perform the actual refund
         // There's only 1 bet, so offset=0 and limit=1 is valid

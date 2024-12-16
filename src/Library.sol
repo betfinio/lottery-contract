@@ -16,7 +16,7 @@ library Library {
     // possible numbers: 1-25
 
     function validate(Ticket calldata ticket) public pure returns (bool) {
-		// 25 bits set max (2^25 - 1)
+        // 25 bits set max (2^25 - 1)
         if (ticket.numbers > 0x1FFFFFF) {
             return false;
         }

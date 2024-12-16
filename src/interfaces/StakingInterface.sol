@@ -16,7 +16,7 @@ interface StakingInterface {
 
     function reserveFunds(uint256 amount) external;
 
-	function addGame(address _game) external;
+    function addGame(address _game) external;
 
-	function isCalculation() external view returns (bool);
+    function isCalculation() external view returns (bool);
 }

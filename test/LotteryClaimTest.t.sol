@@ -2,11 +2,6 @@
 pragma solidity >=0.8.25 <0.9.0;
 
 import { Test } from "forge-std/src/Test.sol";
-import { CoreInterface } from "src/interfaces/CoreInterface.sol";
-import { PartnerInterface } from "src/interfaces/PartnerInterface.sol";
-import { StakingInterface } from "src/interfaces/StakingInterface.sol";
-import { PassInterface } from "src/interfaces/PassInterface.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Token } from "src/Token.sol";
 import { Lottery } from "src/Lottery.sol";
 import { Library } from "src/Library.sol";
@@ -41,7 +36,9 @@ contract LotteryClaimTest is Test {
             abi.encodeWithSelector(IVRFSubscriptionV2Plus.createSubscription.selector),
             abi.encode(5)
         );
-        lottery = new Lottery(address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this));
+        lottery = new Lottery(
+            address(dynamicStaking), core, address(this), address(coordinator), bytes32("0x999"), address(this)
+        );
         address[] memory consumers = new address[](0);
         vm.mockCall(
             address(coordinator),
@@ -95,7 +92,7 @@ contract LotteryClaimTest is Test {
         randomWords[5] = s - 1;
         vm.prank(address(coordinator));
         LotteryRound(_round).rawFulfillRandomWords(555, randomWords);
-        assertEq(round.getStatus(), 3);
+        assertEq(LotteryRound(_round).getStatus(), 3);
     }
 
     function testSinglePlayer_5numbers_symbolUnlocked() public {
@@ -106,6 +103,7 @@ contract LotteryClaimTest is Test {
         placeBet(alice, address(round), tickets);
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
         (uint8 symbol, uint32 numbers) = round.winTicket();
         assertEq(symbol, 1);
         assertEq(numbers, 62);
@@ -121,6 +119,7 @@ contract LotteryClaimTest is Test {
         vm.warp(block.timestamp + 30 days + 30 minutes);
 
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
 
         (uint8 symbol, uint32 numbers) = round.winTicket();
         assertEq(symbol, 1);
@@ -143,6 +142,7 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 9, 1, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -157,6 +157,8 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 9, 1, address(round));
+        round.processJackpot();
+
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -173,6 +175,8 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 24, 25, 1, address(round));
+        round.processJackpot();
+
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -187,6 +191,7 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 24, 25, 1, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -203,6 +208,7 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 23, 24, 25, 1, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -217,6 +223,7 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 23, 24, 25, 1, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -233,6 +240,7 @@ contract LotteryClaimTest is Test {
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 5, 2, address(round));
+        round.processJackpot();
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -258,6 +266,8 @@ contract LotteryClaimTest is Test {
 
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
+
         // alice
         vm.startPrank(alice);
         lottery.claim(tokenId);
@@ -285,6 +295,7 @@ contract LotteryClaimTest is Test {
         placeBet(alice, address(round), tickets);
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
 
         assertEq(
             token.balanceOf(address(alice)), ticketPrice * (33_334 + 13_334 + 13_334) + (ticketPrice * 9) * 3 / 100
@@ -301,6 +312,7 @@ contract LotteryClaimTest is Test {
         vm.warp(block.timestamp + 30 days + 30 minutes);
 
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
         assertEq(token.balanceOf(address(alice)), 0);
         assertEq(token.balanceOf(address(round)), ticketPrice * 97 / 100);
         assertEq(token.balanceOf(address(lottery)), ticketPrice * 3 / 100 + reserved);
@@ -314,6 +326,7 @@ contract LotteryClaimTest is Test {
 
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 2, 3, 4, 5, 1, address(newRound));
+        LotteryRound(newRound).processJackpot();
         assertEq(token.balanceOf(address(alice)), ticketPrice * (33_334 + 13_334 + 13_334) + 4 * ticketPrice * 3 / 100);
         assertEq(token.balanceOf(address(newRound)), 0);
         assertEq(token.balanceOf(address(lottery)), reserved);
@@ -338,7 +351,7 @@ contract LotteryClaimTest is Test {
         tickets1[0] = Library.Ticket(2, 94); // 2 and 00000000000000000001011110 = [1,2,3,4,6] & 2
         address _bet1 = placeBet(bob, address(round), tickets1);
         LotteryBet bet1 = LotteryBet(_bet1);
-        uint256 tokenId1 = bet1.getTokenId();
+        bet1.getTokenId();
 
         vm.expectRevert(bytes("LT12"));
         lottery.claim(1);
@@ -359,6 +372,7 @@ contract LotteryClaimTest is Test {
         vm.warp(block.timestamp + 30 days + 30 minutes);
 
         fulfill(1, 2, 3, 4, 5, 1, address(round));
+        round.processJackpot();
         assertEq(token.balanceOf(address(lottery)), ticketPrice * 213_770 + ticketPrice * 3 / 100);
         assertEq(token.balanceOf(address(round)), ticketPrice - ticketPrice * 3 / 100);
         console.log("After fulfilling, remaining tokens in LotteryRound contract: ", token.balanceOf(address(round)));

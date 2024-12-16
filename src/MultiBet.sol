@@ -2,13 +2,12 @@
 pragma solidity ^0.8.25;
 
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "./interfaces/PartnerInterface.sol";
-import "./Token.sol";
+import { PartnerInterface } from "./interfaces/PartnerInterface.sol";
+import { Token } from "./Token.sol";
 
 /**
  * Error codes:
  * MB01 - invalid length of input data
- * MB02 - insuficcient balance to make a bet
  */
 contract MultiBet is IERC721Receiver {
     Token public token;
@@ -20,7 +19,7 @@ contract MultiBet is IERC721Receiver {
     }
 
     function placeBet(address partner, address game, uint256 amount, bytes memory data) public {
-        require(token.transferFrom(msg.sender, address(this), amount));
+        token.transferFrom(msg.sender, address(this), amount);
         token.approve(core, amount);
         PartnerInterface(partner).placeBet(game, amount, data);
     }
@@ -33,8 +32,8 @@ contract MultiBet is IERC721Receiver {
     )
         public
     {
-        require(games.length == amounts.length, "RL01");
-        require(games.length == datas.length, "RL01");
+        require(games.length == amounts.length, "MB01");
+        require(games.length == datas.length, "MB01");
         for (uint256 i = 0; i < games.length; i++) {
             placeBet(partner, games[i], amounts[i], datas[i]);
         }

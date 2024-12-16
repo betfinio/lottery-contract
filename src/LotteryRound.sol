@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import { GameInterface } from "./interfaces/GameInterface.sol";
 import { StakingInterface } from "./interfaces/StakingInterface.sol";
 import { LotteryBet } from "./LotteryBet.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VRFConsumerBaseV2Plus } from "@chainlink/contracts/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 import { Lottery } from "./Lottery.sol";
@@ -58,8 +56,9 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     * 1 - betting
     * 2 - pending
     * 3 - done
-    * 4 - refund
+    * 4 - claiming
     * 5 - waiting for request
+    * 6 - refund
     */
     uint8 private status;
     uint256 private requestId;
@@ -183,25 +182,10 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         emit RoundRequested(requestId);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
-        // check requrst id
-        require(_requestId == requestId, "LR07");
-        // check status
-        require(getStatus() == 2, "LR07");
+    function processJackpot() external {
+        require(status == 3, "LR09");
         // update status
-        status = 3;
-        // create result
-        uint256 number1 = _randomWords[0] % 25 + 1;
-        uint256 number2 = _randomWords[1] % 25 + 1;
-        uint256 number3 = _randomWords[2] % 25 + 1;
-        uint256 number4 = _randomWords[3] % 25 + 1;
-        uint256 number5 = _randomWords[4] % 25 + 1;
-
-        uint8 symbol = uint8(_randomWords[5] % 5 + 1);
-        uint32 numbers = uint32(2 ** number1 + 2 ** number2 + 2 ** number3 + 2 ** number4 + 2 ** number5);
-
-        winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
-
+        status = 4;
         // get jackpot ticket bitmap
         bytes memory winMap = abi.encode(winTicket.symbol, winTicket.numbers);
         // calculate 3% of bets
@@ -221,6 +205,33 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
                 lottery.claim(LotteryBet(bitmaps[winMap]).getTokenId());
             }
         }
+    }
+
+    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
+        // check request id
+        require(_requestId == requestId, "LR07");
+        // check status
+        require(getStatus() == 2, "LR07");
+        // update status
+        status = 3;
+
+        uint32 numbers = 0;
+
+        for (uint256 i = 0; i < 5; i++) {
+            uint32 random = uint32(_randomWords[i] % 25 + 1);
+            uint32 newNumbers = numbers | uint32(1 << random);
+            uint256 count = Library.countBits(newNumbers);
+            uint32 offset = 1;
+            while (count != i + 1) {
+                newNumbers = numbers | (uint32(1) << (random + offset));
+                count = Library.countBits(newNumbers);
+                offset++;
+            }
+            numbers = newNumbers;
+        }
+
+        uint8 symbol = uint8(_randomWords[5] % 5 + 1);
+        winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
         // emit event
         emit RoundFinished(winTicket);
     }
@@ -257,12 +268,12 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // check if the round is pending
         require(status == 1, "LR06");
         // update status
-        status = 4;
+        status = 6;
     }
 
     function refund(uint256 offset, uint256 limit) external {
         // check is round is in refund mode
-        require(status == 4, "LR09");
+        require(status == 6, "LR09");
         // check if offset and limit are valid
         require(offset + limit <= betsCount, "LR10");
         // iterate over bets

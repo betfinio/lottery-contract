@@ -19,7 +19,7 @@ contract LotteryBet is BetInterface, AccessControl {
     uint256 private immutable tokenId; // tokenId of Lottery{ERC721}
     address private immutable round;
 
-    uint256 private status; // 1 - created, 2 - win, 3 - lose, 4 - refund
+    uint256 private status; // 1 - created, 2 - win, 3 - lose, 6 - refund
     uint256 private result;
     address private player;
 
@@ -141,7 +141,7 @@ contract LotteryBet is BetInterface, AccessControl {
 
     function refund() external onlyRole(ROUND) {
         require(status == 1, "LB01");
-        status = 4;
+        status = 6;
         claimed = true;
     }
 
