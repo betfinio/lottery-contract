@@ -115,6 +115,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     }
 
     function editTickets(address _bet, Library.Ticket[] memory _tickets) external onlyOwner {
+        // check if round is closed
+        require(status == 1, "LR02");
         // get bet contract
         LotteryBet bet = LotteryBet(_bet);
         // get old tickets

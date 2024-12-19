@@ -394,4 +394,49 @@ contract LotteryClaimTest is Test {
 
         assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
     }
+
+    function testEditTicketsDuringWrongStatus() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(2, 1984); // 2 and 00000000000000011111000000 = [6,7,8,9,10] & 2
+        placeBet(alice, address(round), tickets);
+        vm.warp(block.timestamp + 30 days + 30 minutes);
+        fulfill(1, 2, 3, 4, 5, 1, address(round));
+
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110 = [1,2,3,4,5] & 1
+        vm.prank(alice);
+        vm.expectRevert(bytes("LR02"));
+        lottery.editTicket(1, tickets);
+
+        // round.processJackpot();
+
+        // lottery.claim(1);
+
+        // (uint8 symbol, uint32 numbers) = round.winTicket();
+        // assertEq(symbol, 1);
+        // assertEq(numbers, 62);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+    }
+
+    function testEditTicketsWithInvalidTicket() public {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(2, 1984); // 2 and 00000000000000011111000000 = [6,7,8,9,10] & 2
+        placeBet(alice, address(round), tickets);
+
+        tickets[0] = Library.Ticket(1, 67_108_862); // 1 and 11111111111111111111111110 = [1,2,3,4,5] & 1
+        vm.prank(alice);
+		vm.expectRevert(bytes("LT07"));
+        lottery.editTicket(1, tickets);
+
+        // vm.warp(block.timestamp + 30 days + 30 minutes);
+        // fulfill(1, 2, 3, 4, 5, 1, address(round));
+
+        // round.processJackpot();
+
+        // lottery.claim(1);
+
+        // (uint8 symbol, uint32 numbers) = round.winTicket();
+        // assertEq(symbol, 1);
+        // assertEq(numbers, 62);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+    }
 }

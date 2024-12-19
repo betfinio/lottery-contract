@@ -406,4 +406,5 @@ contract LotteryTest is Test {
 
         assertEq(bet.getTicketsCount(), 1);
     }
+	
 }

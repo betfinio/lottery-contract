@@ -241,12 +241,18 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         require(betAddress != address(0), "LT11");
         // get bet contract
         LotteryBet bet = LotteryBet(betAddress);
+        // get count of tickets
+        uint256 count = _newTickets.length;
         // check if claimed
         require(!bet.getClaimed(), "LT09");
         // check count of tickets
-        require(_newTickets.length == bet.getTicketsCount(), "LT01");
+        require(count == bet.getTicketsCount(), "LT01");
         // check player
         require(bet.getPlayer() == _msgSender(), "LT04");
+        // validate all tickets
+        for (uint256 i = 0; i < count; i++) {
+            require(Library.validate(_newTickets[i]), "LT07");
+        }
         // get round address
         address roundAddress = bet.getRound();
         // get round
