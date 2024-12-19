@@ -251,7 +251,7 @@ contract LotteryTest is Test {
 
     function testRequest_success() public {
         Library.Ticket[] memory tickets = new Library.Ticket[](1);
-        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        tickets[0] = Library.Ticket(1, 62); // 1 and [1,2,3,4,5]
         address _bet = placeBet(alice, address(round), tickets);
         LotteryBet bet = LotteryBet(_bet);
         uint256 tokenId = bet.getTokenId();
@@ -274,10 +274,10 @@ contract LotteryTest is Test {
         assertEq(round.getStatus(), 2);
         uint256[] memory randomWords = new uint256[](6);
         randomWords[0] = 0;
-        randomWords[1] = 1;
-        randomWords[2] = 2;
-        randomWords[3] = 3;
-        randomWords[4] = 4;
+        randomWords[1] = 0;
+        randomWords[2] = 0;
+        randomWords[3] = 0;
+        randomWords[4] = 0;
         randomWords[5] = 0;
         vm.prank(address(coordinator));
         round.rawFulfillRandomWords(555, randomWords);
@@ -326,13 +326,16 @@ contract LotteryTest is Test {
 
     function testRepeatedFulfill() public {
         Library.Ticket[] memory tickets = new Library.Ticket[](1);
-        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110 = [1,2,3,4,5] & 1
+        tickets[0] = Library.Ticket(1, 62); // [1,2,3,4,5] & 1
         address _bet = placeBet(alice, address(round), tickets);
         LotteryBet bet = LotteryBet(_bet);
         uint256 tokenId = bet.getTokenId();
         vm.warp(block.timestamp + 30 days + 30 minutes);
-        repeatedRequestsAndfulfill(1, 2, 23, 24, 25, 1, address(round));
+        repeatedRequestsAndfulfill(1, 1, 10, 11, 12, 1, address(round));
+        (, uint32 numbers) = round.winTicket();
+        assertEq(numbers, 86022);// [1,2,12,14,16]
         round.processJackpot();
+
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
@@ -406,5 +409,4 @@ contract LotteryTest is Test {
 
         assertEq(bet.getTicketsCount(), 1);
     }
-	
 }

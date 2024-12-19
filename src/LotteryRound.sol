@@ -217,23 +217,28 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // update status
         status = 3;
 
-        uint32 numbers = 0;
+        // Generate an array of numbers from 1 to 25
+        uint32[] memory pool = new uint32[](25);
+        for (uint32 i = 0; i < 25; i++) {
+            pool[i] = i + 1;
+        }
 
+        // Shuffle the pool using Fisher-Yates algorithm
+        for (uint32 i = 0; i < 25; i++) {
+            uint256 randomIndex = uint256(_randomWords[i % _randomWords.length] % (25 - i)) + i;
+            // Swap the numbers
+            (pool[i], pool[randomIndex]) = (pool[randomIndex], pool[i]);
+        }
+
+        // Select the first 5 numbers
+        uint32 numbers = 0;
         for (uint256 i = 0; i < 5; i++) {
-            uint32 random = uint32(_randomWords[i] % 25 + 1);
-            uint32 newNumbers = numbers | uint32(1 << random);
-            uint256 count = Library.countBits(newNumbers);
-            uint32 offset = 1;
-            while (count != i + 1) {
-                newNumbers = numbers | (uint32(1) << (random + offset));
-                count = Library.countBits(newNumbers);
-                offset++;
-            }
-            numbers = newNumbers;
+            numbers |= (uint32(1) << pool[i]);
         }
 
         uint8 symbol = uint8(_randomWords[5] % 5 + 1);
         winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
+
         // emit event
         emit RoundFinished(winTicket);
     }
