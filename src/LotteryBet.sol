@@ -112,7 +112,7 @@ contract LotteryBet is BetInterface, AccessControl {
 
     function getTickets() external view returns (bytes[] memory) {
         bytes[] memory _tickets = new bytes[](ticketsCount);
-        for (uint256 i = 0; i < ticketsCount; i++) {
+        for (uint256 i = 0; i < _tickets.length; i++) {
             _tickets[i] = abi.encode(tickets[i].symbol, tickets[i].numbers);
         }
         return _tickets;
@@ -120,13 +120,14 @@ contract LotteryBet is BetInterface, AccessControl {
 
     function setTickets(Library.Ticket[] memory _tickets) external onlyRole(LOTTERY) {
         delete tickets;
-        ticketsCount = _tickets.length;
-        for (uint256 i = 0; i < ticketsCount; i++) {
+        uint256 tc = _tickets.length;
+        for (uint256 i = 0; i < tc; i++) {
             tickets.push(_tickets[i]);
         }
-        if (ticketsCount >= 3) {
+        if (tc >= 3) {
             symbolUnlocked = true;
         }
+        ticketsCount = tc;
     }
 
     function setResult(uint256 _result) external onlyRole(LOTTERY) {
