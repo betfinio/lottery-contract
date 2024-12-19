@@ -150,7 +150,7 @@ contract LotteryBet is BetInterface, AccessControl {
         // iterate over tickets and check if any of them is a win
         for (uint256 i = 0; i < ticketsCount; i++) {
             uint256 ticketCoef = Library.compare(tickets[i], _winTicket, symbolUnlocked);
-            if (ticketCoef == 33_334) {
+            if (ticketCoef == 40000) {
                 jackpot = true;
             }
             coef += ticketCoef;

@@ -189,7 +189,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // get jackpot ticket bitmap
         bytes memory winMap = abi.encode(winTicket.symbol, winTicket.numbers);
         // calculate 3% of bets
-        uint256 jackpot = ticketsCount * ticketPrice * 3 / 100;
+        uint256 jackpot = ticketsCount * ticketPrice * 4 / 100;
         // send jackpot to lottery
         require(IERC20(lottery.getToken()).transfer(address(lottery), jackpot), "LR11");
         // update jackpot
@@ -334,8 +334,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // get bet from address
         LotteryBet bet = LotteryBet(_bet);
         // calculate amount to send
-        uint256 amountToSend = ticketPrice * bet.getTicketsCount() * 97 / 100;
-        // send tokens - 3% to staking
+        uint256 amountToSend = ticketPrice * bet.getTicketsCount() * 96 / 100;
+        // send tokens - 4% to staking
         IERC20(lottery.getToken()).transfer(lottery.getStaking(), amountToSend);
         // emit event
         emit TicketClaimed(_bet);

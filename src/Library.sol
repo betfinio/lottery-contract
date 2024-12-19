@@ -58,17 +58,17 @@ library Library {
         if (count == 5) {
             // 1.2. check if symbol is same
             if (ticket.symbol == winner.symbol && symbolUnlocked) {
-                return uint256(33_334); // COMBINATION: 5+1
+                return uint256(40_000); // COMBINATION: 5+1
             }
-            return uint256(13_334); // COMBINATION: 5
+            return uint256(15_000); // COMBINATION: 5
         }
         // 2. check if 4 numbers are same
         if (count == 4) {
             // 2.2. check if symbol is same
             if (ticket.symbol == winner.symbol && symbolUnlocked) {
-                return uint256(334); // COMBINATION: 4+1
+                return uint256(400); // COMBINATION: 4+1
             }
-            return uint256(40); // COMBINATION: 4
+            return uint256(50); // COMBINATION: 4
         }
         // 3. check if 3 numbers are same
         if (count == 3) {

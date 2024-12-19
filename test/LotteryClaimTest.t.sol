@@ -107,7 +107,7 @@ contract LotteryClaimTest is Test {
         (uint8 symbol, uint32 numbers) = round.winTicket();
         assertEq(symbol, 1);
         assertEq(numbers, 62);
-        assertEq(token.balanceOf(address(alice)), ticketPrice * 33_334 + (ticketPrice * 3) * 3 / 100);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 40_000 + (ticketPrice * 3) * 4 / 100);
     }
 
     function testSinglePlayer_5numbers_symbolLocked() public {
@@ -129,7 +129,7 @@ contract LotteryClaimTest is Test {
         lottery.claim(tokenId);
         vm.stopPrank();
 
-        assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 15_000);
     }
 
     function testSinglePlayer_4numbers_symbolUnlocked() public {
@@ -148,7 +148,7 @@ contract LotteryClaimTest is Test {
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
-        assertEq(token.balanceOf(address(alice)), ticketPrice * 334);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 400);
     }
 
     function testSinglePlayer_4numbers_symbolLocked() public {
@@ -164,7 +164,7 @@ contract LotteryClaimTest is Test {
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
-        assertEq(token.balanceOf(address(alice)), ticketPrice * 40);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 50);
     }
 
     function testSinglePlayer_3numbers_symbolUnlocked() public {
@@ -254,7 +254,7 @@ contract LotteryClaimTest is Test {
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
-        assertEq(token.balanceOf(address(alice)), ticketPrice * (40 + 334 + 13_334)); // 4, 4+1, 5
+        assertEq(token.balanceOf(address(alice)), ticketPrice * (50 + 400 + 15_000)); // 4, 4+1, 5
     }
 
     function testMultiPlayer_complex1() public {
@@ -282,12 +282,12 @@ contract LotteryClaimTest is Test {
         vm.startPrank(alice);
         lottery.claim(tokenId);
         vm.stopPrank();
-        assertEq(token.balanceOf(address(alice)), ticketPrice * (13_334)); // 5
+        assertEq(token.balanceOf(address(alice)), ticketPrice * (15_000)); // 5
         // bob
         vm.startPrank(bob);
         lottery.claim(tokenId1);
         vm.stopPrank();
-        assertEq(token.balanceOf(address(bob)), ticketPrice * (13_334 * 3)); // 5,5,5
+        assertEq(token.balanceOf(address(bob)), ticketPrice * (15_000 * 3)); // 5,5,5
     }
 
     function testSinglePlayer_fullTicket() public {
@@ -308,7 +308,7 @@ contract LotteryClaimTest is Test {
         round.processJackpot();
 
         assertEq(
-            token.balanceOf(address(alice)), ticketPrice * (33_334 + 13_334 + 13_334) + (ticketPrice * 9) * 3 / 100
+            token.balanceOf(address(alice)), ticketPrice * (40_000 + 15_000 + 15_000) + (ticketPrice * 9) * 4 / 100
         );
         assertEq(token.balanceOf(address(round)), 0 ether);
         assertEq(token.balanceOf(address(lottery)), 0);
@@ -324,8 +324,8 @@ contract LotteryClaimTest is Test {
         fulfill(1, 1, 1, 1, 1, 1, address(round));
         round.processJackpot();
         assertEq(token.balanceOf(address(alice)), 0);
-        assertEq(token.balanceOf(address(round)), ticketPrice * 97 / 100);
-        assertEq(token.balanceOf(address(lottery)), ticketPrice * 3 / 100 + reserved);
+        assertEq(token.balanceOf(address(round)), ticketPrice * 96 / 100);
+        assertEq(token.balanceOf(address(lottery)), ticketPrice * 4 / 100 + reserved);
 
         address newRound = lottery.createRound(block.timestamp + 30 days);
         Library.Ticket[] memory newTickets = new Library.Ticket[](3);
@@ -337,7 +337,7 @@ contract LotteryClaimTest is Test {
         vm.warp(block.timestamp + 30 days + 30 minutes);
         fulfill(1, 1, 1, 1, 1, 1, address(newRound));
         LotteryRound(newRound).processJackpot();
-        assertEq(token.balanceOf(address(alice)), ticketPrice * (33_334 + 13_334 + 13_334) + 4 * ticketPrice * 3 / 100);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * (40_000 + 15_000 + 15_000) + 4 * ticketPrice * 4 / 100);
         assertEq(token.balanceOf(address(newRound)), 0);
         assertEq(token.balanceOf(address(lottery)), reserved);
 
@@ -346,7 +346,7 @@ contract LotteryClaimTest is Test {
         assertEq(token.balanceOf(address(round)), 0);
         assertEq(
             token.balanceOf(address(alice)),
-            ticketPrice * (33_334 + 13_334 + 13_334 + 13_334) + 4 * ticketPrice * 3 / 100
+            ticketPrice * (40_000 + 15_000 + 15_000 + 15_000) + 4 * ticketPrice * 4 / 100
         );
     }
 
@@ -370,7 +370,7 @@ contract LotteryClaimTest is Test {
         // (uint8 symbol, uint32 numbers) = round.winTicket();
         // assertEq(symbol, 1);
         // assertEq(numbers, 62);
-        // assertEq(token.balanceOf(address(alice)), ticketPrice * 33_334 + (ticketPrice * 3) * 3 / 100);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 40000 + (ticketPrice * 4) * 4 / 100);
     }
 
     function testRemainingTokensInContract() public {
@@ -383,8 +383,8 @@ contract LotteryClaimTest is Test {
 
         fulfill(1, 1, 1, 1, 1, 1, address(round));
         round.processJackpot();
-        assertEq(token.balanceOf(address(lottery)), ticketPrice * 213_770 + ticketPrice * 3 / 100);
-        assertEq(token.balanceOf(address(round)), ticketPrice - ticketPrice * 3 / 100);
+        assertEq(token.balanceOf(address(lottery)), ticketPrice * lottery.MAX_SHARES() + ticketPrice * 4 / 100);
+        assertEq(token.balanceOf(address(round)), ticketPrice - ticketPrice * 4 / 100);
         console.log("After fulfilling, remaining tokens in LotteryRound contract: ", token.balanceOf(address(round)));
         console.log("After fulfilling, remaining tokens in Lottery contract: ", token.balanceOf(address(lottery)));
 
@@ -402,7 +402,7 @@ contract LotteryClaimTest is Test {
 
         assertEq(lottery.additionalJackpot(), token.balanceOf(address(lottery)));
 
-        assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+        assertEq(token.balanceOf(address(alice)), ticketPrice * 15_000);
     }
 
     function testEditTicketsDuringWrongStatus() public {
@@ -424,7 +424,7 @@ contract LotteryClaimTest is Test {
         // (uint8 symbol, uint32 numbers) = round.winTicket();
         // assertEq(symbol, 1);
         // assertEq(numbers, 62);
-        // assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 15_000);
     }
 
     function testEditTicketsWithInvalidTicket() public {
@@ -447,7 +447,7 @@ contract LotteryClaimTest is Test {
         // (uint8 symbol, uint32 numbers) = round.winTicket();
         // assertEq(symbol, 1);
         // assertEq(numbers, 62);
-        // assertEq(token.balanceOf(address(alice)), ticketPrice * 13_334);
+        // assertEq(token.balanceOf(address(alice)), ticketPrice * 15_000);
     }
 
     // function testInvalidTicketGenertedByFulfillRandomNumbers() public {

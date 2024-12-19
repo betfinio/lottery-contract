@@ -41,7 +41,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     bytes32 public constant CORE = keccak256("CORE");
 
     uint256 public constant MAX_TICKETS_PER_BET = 9;
-    uint256 public constant MAX_SHARES = 213_770;
+    uint256 public constant MAX_SHARES = 188_500;
     uint256 public ticketPrice = 1500 ether;
 
     uint256 private immutable created;
