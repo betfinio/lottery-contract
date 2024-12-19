@@ -59,6 +59,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     mapping(address round => uint256 claimed) private claimedByRound;
 
     event RoundCreated(address indexed round, uint256 indexed timestamp);
+    event RoundFinished(address indexed round);
     event JackpotWon(address indexed round, uint256 indexed amount);
     event TicketsEdited(uint256 indexed id, address indexed bet);
 
@@ -148,6 +149,11 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         emit RoundCreated(address(round), _timestamp);
         // return address of the round
         return address(round);
+    }
+
+    function removeConsumer() external onlyRole(ROUND) {
+        coordinator.removeConsumer(subscriptionId, address(msg.sender));
+        emit RoundFinished(msg.sender);
     }
 
     function reserveFunds(uint256 amount) external onlyRole(ROUND) {

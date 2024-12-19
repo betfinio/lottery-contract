@@ -236,7 +236,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
 
         uint8 symbol = uint8(_randomWords[5] % 5 + 1);
         winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
-
+        // remove round as consumer to empty consumer slot
+        lottery.removeConsumer();
         // emit event
         emit RoundFinished(winTicket);
     }
