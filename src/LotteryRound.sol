@@ -26,11 +26,13 @@ import { VRFV2PlusClient } from "@chainlink/contracts/vrf/dev/libraries/VRFV2Plu
  * LR11: Transfer failed
  * LR12: invalidat round status to request
  * LR13: could not restart request - conditions are not met
+ * LR14: could not recover funds - conditions are not met
  */
 contract LotteryRound is VRFConsumerBaseV2Plus {
     using SafeERC20 for IERC20;
 
     uint256 public constant REQUEST_PERIOD = 1 hours;
+    uint256 public constant RECOVER_PERIOD = 36 hours;
 
     uint256 private immutable subscriptionId;
     bytes32 private immutable keyHash;
@@ -67,6 +69,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     event RoundRequested(uint256 indexed requestId);
     event RoundFinished(Library.Ticket winTicket);
     event TicketClaimed(address indexed bet);
+    event RefundInitiated();
+    event RecoverInitiated();
 
     constructor(
         address _lottery,
@@ -156,12 +160,6 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         lottery.reserveFunds(toReserve);
         // update status
         status = 2;
-        _requestRandomness();
-    }
-
-    function requestAgain() external {
-        // only if status = 2 and requestTime + 24 hours
-        require(status == 2 && ((requestedTime + 1 days) < block.timestamp), "LR13");
         _requestRandomness();
     }
 
@@ -276,6 +274,19 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(status == 1, "LR06");
         // update status
         status = 6;
+        emit RefundInitiated();
+    }
+
+    function startRecover() external {
+        // check if the round is closed
+        require(!isOpen(), "LR06");
+        // check if the request period has passed
+        require(block.timestamp >= requestedTime + RECOVER_PERIOD, "LR14");
+        // check if the round is pending
+        require(status == 2, "LR06");
+        // update status
+        status = 6;
+        emit RecoverInitiated();
     }
 
     function refund(uint256 offset, uint256 limit) external {

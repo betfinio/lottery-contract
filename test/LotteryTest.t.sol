@@ -333,7 +333,7 @@ contract LotteryTest is Test {
         vm.warp(block.timestamp + 30 days + 30 minutes);
         repeatedRequestsAndfulfill(1, 1, 10, 11, 12, 1, address(round));
         (, uint32 numbers) = round.winTicket();
-        assertEq(numbers, 86022);// [1,2,12,14,16]
+        assertEq(numbers, 86_022); // [1,2,12,14,16]
         round.processJackpot();
 
         vm.startPrank(alice);
@@ -408,5 +408,41 @@ contract LotteryTest is Test {
         lottery.editTicket(tokenId, tickets);
 
         assertEq(bet.getTicketsCount(), 1);
+    }
+
+    function testRecover() external {
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        placeBet(alice, address(round), tickets);
+        assertEq(round.getStatus(), 1);
+
+        vm.warp(block.timestamp + 30 days + 30 minutes);
+        vm.mockCall(
+            coordinator, abi.encodeWithSelector(IVRFCoordinatorV2Plus.requestRandomWords.selector), abi.encode(555)
+        );
+        round.requestRandomness();
+
+        assertEq(round.getStatus(), 2);
+
+		vm.expectRevert(bytes("LR08"));
+		round.startRefund();
+
+		vm.warp(block.timestamp + 1 hours);
+
+
+		vm.expectRevert(bytes("LR06"));
+		round.startRefund();
+
+		vm.expectRevert(bytes("LR14"));
+		round.startRecover();
+
+		vm.warp(block.timestamp + 36 hours);
+
+		round.startRecover();
+
+
+
+
+
     }
 }
