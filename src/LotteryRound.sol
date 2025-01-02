@@ -222,7 +222,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         }
 
         // Shuffle the pool using Fisher-Yates algorithm
-        for (uint32 i = 0; i < 25; i++) {
+        for (uint32 i = 0; i < 5; i++) {
             uint256 randomIndex = uint256(_randomWords[i % _randomWords.length] % (25 - i)) + i;
             // Swap the numbers
             (pool[i], pool[randomIndex]) = (pool[randomIndex], pool[i]);
@@ -236,8 +236,6 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
 
         uint8 symbol = uint8(_randomWords[5] % 5 + 1);
         winTicket = Library.Ticket({ numbers: numbers, symbol: symbol });
-        // remove round as consumer to empty consumer slot
-        lottery.removeConsumer();
         // emit event
         emit RoundFinished(winTicket);
     }
@@ -287,6 +285,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(status == 2, "LR06");
         // update status
         status = 6;
+        // return funds to staking
+        lottery.refund(ticketPrice * ticketsCount);
         emit RecoverInitiated();
     }
 

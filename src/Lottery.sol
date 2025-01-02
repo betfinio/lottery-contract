@@ -31,7 +31,8 @@ import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/I
  * LT09: Already claimed
  * LT10: Calculation time
  * LT11: Invalid id
- * LT12: Invalid roun status to claim
+ * LT12: Invalid round status to claim
+ * LT13: Invalid round status to remove
  */
 contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
     using SafeERC20 for IERC20;
@@ -151,9 +152,12 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         return address(round);
     }
 
-    function removeConsumer() external onlyRole(ROUND) {
-        coordinator.removeConsumer(subscriptionId, address(msg.sender));
-        emit RoundFinished(msg.sender);
+    function removeConsumer(address _round) external onlyRole(SERVICE) {
+        require(rounds[_round], "LT02");
+        uint256 status = LotteryRound(_round).getStatus();
+        require(status == 4 || status == 6, "LT13");
+        coordinator.removeConsumer(subscriptionId, address(_round));
+        emit RoundFinished(_round);
     }
 
     function reserveFunds(uint256 amount) external onlyRole(ROUND) {
@@ -240,6 +244,16 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         _claim(id);
     }
 
+    function refund(uint256 amount) external onlyRole(ROUND) {
+        token.transfer(address(staking), amount);
+    }
+
+    function claimAll(uint256[] calldata ids) external {
+        for (uint256 i = 0; i < ids.length; i++) {
+            _claim(ids[i]);
+        }
+    }
+
     function editTicket(uint256 id, Library.Ticket[] memory _newTickets) external {
         // get bet address
         address betAddress = bets[id];
@@ -297,10 +311,10 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
             if (jackpot) {
                 // transfer jackpot to player
                 token.transfer(bet.getPlayer(), winAmount + additionalJackpot);
-                // reset additional jackpot
-                additionalJackpot = 0;
                 // emit Jackpot event
                 emit JackpotWon(roundAddress, additionalJackpot);
+                // reset additional jackpot
+                additionalJackpot = 0;
             } else {
                 // transfer win amount to player
                 token.transfer(bet.getPlayer(), winAmount);
