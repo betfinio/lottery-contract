@@ -154,8 +154,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(block.timestamp < finish + REQUEST_PERIOD, "LR05");
         // check that round status is correct
         require(getStatus() == 5, "LR12");
-		// check if there are bets
-		require(betsCount > 0, "LR15");
+        // check if there are bets
+        require(betsCount > 0, "LR15");
         // calculate the amount to reserve
         uint256 toReserve = ticketPrice * lottery.MAX_SHARES();
         // reserve funds
@@ -172,7 +172,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
                 subId: subscriptionId,
-                requestConfirmations: 3,
+                requestConfirmations: 10,
                 callbackGasLimit: 2_500_000,
                 numWords: 6,
                 extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: true }))
