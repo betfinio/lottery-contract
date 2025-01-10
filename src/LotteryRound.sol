@@ -154,6 +154,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(block.timestamp < finish + REQUEST_PERIOD, "LR05");
         // check that round status is correct
         require(getStatus() == 5, "LR12");
+		// check if there are bets
+		require(betsCount > 0, "LR15");
         // calculate the amount to reserve
         uint256 toReserve = ticketPrice * lottery.MAX_SHARES();
         // reserve funds
