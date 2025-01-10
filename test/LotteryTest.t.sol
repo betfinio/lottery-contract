@@ -440,9 +440,7 @@ contract LotteryTest is Test {
 
 		round.startRecover();
 
-
-
-
+		assertEq(token.balanceOf(address(lottery)), 0 ether);
 
     }
 }

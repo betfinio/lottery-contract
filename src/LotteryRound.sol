@@ -286,7 +286,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         // update status
         status = 6;
         // return funds to staking
-        lottery.refund(ticketPrice * ticketsCount);
+        lottery.refund(ticketPrice * lottery.MAX_SHARES());
         emit RecoverInitiated();
     }
 
