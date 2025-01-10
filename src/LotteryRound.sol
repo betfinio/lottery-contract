@@ -172,7 +172,7 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
                 subId: subscriptionId,
-                requestConfirmations: 10,
+                requestConfirmations: 20,
                 callbackGasLimit: 2_500_000,
                 numWords: 6,
                 extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: true }))
