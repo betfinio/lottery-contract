@@ -254,6 +254,12 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         }
     }
 
+    function cancelSubscription() external onlyRole(SERVICE) {
+        // Cancel the subscription and send the remaining funds to a wallet address.
+        coordinator.cancelSubscription(subscriptionId, _msgSender());
+        subscriptionId = 0;
+    }
+
     function editTicket(uint256 id, Library.Ticket[] memory _newTickets) external {
         // get bet address
         address betAddress = bets[id];
