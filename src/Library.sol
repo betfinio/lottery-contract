@@ -17,7 +17,8 @@ library Library {
 
     function validate(Ticket calldata ticket) public pure returns (bool) {
         // 25 bits set max (2^25 - 1)
-        if (ticket.numbers > 0x1FFFFFF) {
+        if (ticket.numbers > 0x3E00000) {
+            // max ticket number is 11111000000000000000000000
             return false;
         }
         // validate symbol

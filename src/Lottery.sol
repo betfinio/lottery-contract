@@ -104,6 +104,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         require(_count == _tickets.length, "LT01");
         // validate tickets count
         require(_count <= MAX_TICKETS_PER_BET, "LT01");
+        require(_count > 0, "LT01");
         // validate all tickets
         for (uint256 i = 0; i < _count; i++) {
             require(Library.validate(_tickets[i]), "LT07");
@@ -114,6 +115,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         uint256 price = LotteryRound(_round).ticketPrice();
         // validate amount
         require(amount == price * _count, "LT03");
+        require(amount > 0, "LT03");
         // generate token id
         uint256 tokenId = totalSupply() + 1;
         // create bet contract
