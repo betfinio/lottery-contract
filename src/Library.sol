@@ -26,7 +26,7 @@ library Library {
             return false;
         }
         // validate numbers
-        if (ticket.numbers == 0) {
+        if (ticket.numbers % 2 == 1 || ticket.numbers == 0) {
             return false; // 00000000000000000000000001 - selected are: [0] - not possible
         }
         // validate positive bits count

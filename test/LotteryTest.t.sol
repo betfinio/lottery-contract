@@ -136,6 +136,26 @@ contract LotteryTest is Test {
         assertEq(round.getBetsCount(), 1);
         assertEq(round.getTicketsCount(), 1);
     }
+    function testPlaceBet_raw_zero() public {
+        token.transfer(address(lottery), ticketPrice);
+        vm.startPrank(core);
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 31); // 1 and 00000000000000000000011111
+        bytes memory data = abi.encode(address(round), alice, 1, tickets);
+		vm.expectRevert(bytes("LT07"));
+        lottery.placeBet(alice, ticketPrice, data);
+        vm.stopPrank();
+    }
+    function testPlaceBet_raw_zeroOnly() public {
+        token.transfer(address(lottery), ticketPrice);
+        vm.startPrank(core);
+        Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 1); // 1 and 00000000000000000000000001
+        bytes memory data = abi.encode(address(round), alice, 1, tickets);
+		vm.expectRevert(bytes("LT07"));
+        lottery.placeBet(alice, ticketPrice, data);
+        vm.stopPrank();
+    }
 
     function testPlaceBet_oneTicket() public {
         Library.Ticket[] memory tickets = new Library.Ticket[](1);
