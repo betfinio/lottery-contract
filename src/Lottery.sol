@@ -13,9 +13,11 @@ import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC721Metadata } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Library } from "./Library.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 
 /**
@@ -34,7 +36,7 @@ import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/vrf/dev/interfaces/I
  * LT12: Invalid round status to claim
  * LT13: Invalid round status to remove
  */
-contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
+contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable, ERC721URIStorage {
     using SafeERC20 for IERC20;
 
     bytes32 public constant SERVICE = keccak256("SERVICE");
@@ -54,6 +56,8 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
 
     uint256 public additionalJackpot;
     uint256 public subscriptionId;
+
+	string public uri;
 
     mapping(address round => bool exists) public rounds;
     mapping(uint256 tokenId => address bet) public bets;
@@ -200,7 +204,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
         public
         view
         virtual
-        override(ERC721, ERC721Enumerable, AccessControl)
+        override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
@@ -341,5 +345,13 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable {
             // transfer to staking
             token.transfer(address(staking), toSend);
         }
+    }
+
+	function setURI(string memory _uri) external onlyRole(SERVICE) {
+		uri = _uri;
+	}
+
+    function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage) returns (string memory) {
+		return string.concat(uri, "/", Strings.toString(tokenId), ".json");
     }
 }

@@ -49,6 +49,7 @@ contract LotteryTest is Test {
         dynamicStaking.addGame(address(lottery));
     }
 
+
     function placeBet(address _player, address _round, Library.Ticket[] memory _tickets) internal returns (address) {
         uint256 amount = _tickets.length * ticketPrice;
         token.transfer(address(lottery), amount);
@@ -463,4 +464,18 @@ contract LotteryTest is Test {
 		assertEq(token.balanceOf(address(lottery)), 0 ether);
 
     }
+
+	function testTokenURI() public {
+		 Library.Ticket[] memory tickets = new Library.Ticket[](1);
+        tickets[0] = Library.Ticket(1, 62); // 1 and 00000000000000000000111110
+        address betAddress = placeBet(alice, address(round), tickets);
+        assertEq(round.getStatus(), 1);
+
+		lottery.setURI("https://lottery.com");
+
+		LotteryBet bet = LotteryBet(betAddress);
+		uint256 tokenId = bet.getTokenId();
+		assertEq(lottery.tokenURI(tokenId), "https://lottery.com/1.json");
+
+	}
 }
