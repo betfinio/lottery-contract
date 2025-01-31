@@ -67,6 +67,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable, ERC7
     event RoundFinished(address indexed round);
     event JackpotWon(address indexed round, uint256 indexed amount);
     event TicketsEdited(uint256 indexed id, address indexed bet);
+	event TicketClaimed(address indexed bet, uint256 indexed amount);
 
     constructor(
         address _staking,
@@ -345,6 +346,7 @@ contract Lottery is GameInterface, AccessControl, ERC721, ERC721Enumerable, ERC7
             // transfer to staking
             token.transfer(address(staking), toSend);
         }
+		emit TicketClaimed(betAddress, winAmount);
     }
 
 	function setURI(string memory _uri) external onlyRole(SERVICE) {
