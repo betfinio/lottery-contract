@@ -69,8 +69,10 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
     event RoundRequested(uint256 indexed requestId);
     event RoundFinished(Library.Ticket winTicket);
     event TicketClaimed(address indexed bet);
+    event TicketSold(address indexed bet, uint256 amount);
     event RefundInitiated();
     event RecoverInitiated();
+    event FinishUpdated(uint256 indexed finish);
 
     constructor(
         address _lottery,
@@ -116,6 +118,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         bets.push(_bet);
         // check balance of round - should not happen, but anyway
         require(IERC20(lottery.getToken()).balanceOf(address(this)) >= ticketsCount * ticketPrice, "LR04");
+		// emit event
+		emit TicketSold(_bet, ticketsCount * ticketPrice);
     }
 
     function editTickets(address _bet, Library.Ticket[] memory _tickets) external onlyOwner {
@@ -321,6 +325,8 @@ contract LotteryRound is VRFConsumerBaseV2Plus {
         require(_finish > finish, "LR03");
         // update finish
         finish = _finish;
+        // emit event
+        emit FinishUpdated(_finish);
     }
 
     function getStatus() public view returns (uint8) {

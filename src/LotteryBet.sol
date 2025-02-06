@@ -30,6 +30,8 @@ contract LotteryBet is BetInterface, AccessControl {
     bool private symbolUnlocked = false;
 
     event PlayerChanged(address indexed player);
+	event Refunded(uint256 amount);
+	event Claimed(uint256 amount);
 
     constructor(address _player, uint256 _amount, address _game, uint256 _tokenId, address _round) {
         require(_player != address(0), "LB02");
@@ -138,12 +140,14 @@ contract LotteryBet is BetInterface, AccessControl {
             status = 3;
         }
         claimed = true;
+		emit Claimed(result);
     }
 
     function refund() external onlyRole(ROUND) {
         require(status == 1, "LB01");
         status = 6;
         claimed = true;
+		emit Refunded(amount);
     }
 
     function calculateResult(Library.Ticket memory _winTicket) external view returns (uint256 coef, bool jackpot) {
